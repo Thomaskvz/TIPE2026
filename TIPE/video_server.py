@@ -28,6 +28,10 @@ i = 0
 
 test = False # A ENLEVER
 
+mode = input("Veuillez choisir le mode de controle (Automatique: a, Manuel: m): ")
+
+definition_byte = [b'F', b'R', b'L', b'B']
+
 try:
     while True:
         image_len_data = connection.read(struct.calcsize('<L'))
@@ -64,9 +68,9 @@ try:
         pred = ia_image.clf.predict(img.flatten().reshape(1,-1))
         print(ia_image.definition[pred[0]])
 
-        if test == False:
-            test = True
-            print(frame)
+        # if test == False:
+        #     test = True
+        #     print(frame)
 
         """for event in pg.event.get():
             if event.type == pg.KEYDOWN:
@@ -86,31 +90,35 @@ try:
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break"""
+        
+        if mode == "a": #Mode Automatique
+            conn.sendall(definition_byte[pred[0]])
+
+        if mode == "m": #Mode Manuel
+            for event in pg.event.get():
     
-        for event in pg.event.get():
-
-            if event.type == pg.QUIT:
-                sys.exit()
-            elif event.type == pg.KEYDOWN:
-                if event.key == pg.K_z:      # forward
-                    conn.sendall(b'F')
-                    print("Forward")
-                elif event.key == pg.K_s:    # backward
-                    conn.sendall(b'B')
-                    print("Backward")
-                elif event.key == pg.K_q:    # left
-                    conn.sendall(b'L')
-                    print("Left")
-                elif event.key == pg.K_d:    # right
-                    conn.sendall(b'R')
-                    print("Right")
-                elif event.key == pg.K_SPACE:
+                if event.type == pg.QUIT:
+                    sys.exit()
+                elif event.type == pg.KEYDOWN:
+                    if event.key == pg.K_z:      # forward
+                        conn.sendall(b'F')
+                        print("Forward")
+                    elif event.key == pg.K_s:    # backward
+                        conn.sendall(b'B')
+                        print("Backward")
+                    elif event.key == pg.K_q:    # left
+                        conn.sendall(b'L')
+                        print("Left")
+                    elif event.key == pg.K_d:    # right
+                        conn.sendall(b'R')
+                        print("Right")
+                    elif event.key == pg.K_SPACE:
+                        conn.sendall(b'S')
+                        print("Stop")
+    
+                elif event.type == pg.KEYUP:
+                    # stop the car when key is released
                     conn.sendall(b'S')
-                    print("Stop")
-
-            elif event.type == pg.KEYUP:
-                # stop the car when key is released
-                conn.sendall(b'S')
 
 
 
@@ -122,3 +130,4 @@ finally:
     connection.close()
     conn.close()
     server_socket.close()
+
