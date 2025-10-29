@@ -1,22 +1,20 @@
 import socket
 import struct
 import time
-import sys
 import cv2
 from picamera2 import Picamera2
 from libcamera import Transform
+import controle as c
 
-
-# Usage: python3 client_pi_bw_fps.py <PC_IP> <PORT> [TARGET_FPS]
-# SERVER_IP = "172.20.10.5"
-SERVER_IP = "192.168.1.136"
+SERVER_IP = "192.168.1.136"  # your PC IP
 SERVER_PORT = 9998
 TARGET_FPS = 15.0 
 
 # --- Setup socket ---
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((SERVER_IP, SERVER_PORT))
-connection = client_socket.makefile('wb')
+client_socket.settimeout(0.05)  # non-blocking recv (50ms timeout)
+print("Connected to server.")
 
 # --- Setup camera ---
 picam2 = Picamera2()
@@ -33,13 +31,13 @@ last_capture = 0.0
 
 try:
     while True:
+        # Limit FPS
         now = time.time()
         if now - last_capture < frame_interval:
-            # maintain desired FPS
             time.sleep(frame_interval - (now - last_capture))
         last_capture = time.time()
 
-        # Capture and process
+        # Capture frame
         frame = picam2.capture_array()
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
@@ -48,11 +46,37 @@ try:
         data = img_encode.tobytes()
 
         # Send frame
-        connection.write(struct.pack('<L', len(data)))
-        connection.flush()
-        connection.write(data)
+        client_socket.sendall(struct.pack('<L', len(data)))
+        client_socket.sendall(data)
+
+        # Try receiving command (non-blocking)
+        try:
+            cmd = client_socket.recv(1)
+            if cmd:
+                d = cmd.decode()
+                if d == 'F': 
+                    c.forward(); print("Forward")
+                elif d == 'B': 
+                    c.backward(); print("Backward")
+                elif d == 'L': 
+                    c.left(); print("Left")
+                elif d == 'R': 
+                    c.right(); print("Right")
+                elif d == 'S': 
+                    c.stop(); c.center(); print("Stop")
+                elif d == 'C': 
+                    c.center(); print("Center")
+        except socket.timeout:
+            # No command received; continue streaming
+            pass
+        except (ConnectionResetError, OSError) as e:
+            print("Connection lost:", e)
+            break
 
 finally:
-    connection.close()
     client_socket.close()
     picam2.close()
+    c.stop()
+    c.center()
+    c.GPIO.cleanup()
+    print("Client shutdown cleanly.")
