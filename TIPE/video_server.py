@@ -103,6 +103,8 @@ try:
 
         
         if mode == "a" and arret == False: #Mode Automatique
+            if pred[0] in (0,3):
+                conn.sendall(b'C')
             conn.sendall(definition_byte[pred[0]])
 
         if mode == "m": #Mode Manuel
@@ -135,5 +137,6 @@ finally:
     connection.close()
     conn.close()
     server_socket.close()
+
 
 
