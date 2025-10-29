@@ -49,6 +49,7 @@ try:
         elif c == 'B': backward()
         elif c == 'L': left()
         elif c == 'R': right()
+        elif c == 'C': center()
         elif c == 'S': stop(); center()
 finally:
     stop()
@@ -56,3 +57,4 @@ finally:
     pi.stop()
     GPIO.cleanup()
     s.close()
+
