@@ -5,6 +5,8 @@ import numpy as np
 import sys
 import time
 import pygame as pg
+import ia_image
+
 
 HOST = '' if len(sys.argv) < 2 else sys.argv[1]
 PORT = 9998 if len(sys.argv) < 3 else int(sys.argv[2])
@@ -53,15 +55,20 @@ try:
         prev_time = curr_time
 
         # # Show image with FPS overlay
-        cv2.putText(frame, f"FPS: {fps:.1f}", (10, 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255), 2)
+        # cv2.putText(frame, f"FPS: {fps:.1f}", (10, 25),
+                    # cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255), 2)
         cv2.imshow('Raspberry Pi Stream (B/W)', frame)
+
+        
+        img = frame/255
+        pred = ia_image.clf.predict(img.flatten().reshape(1,-1))
+        print(ia_image.definition[pred[0]])
 
         if test == False:
             test = True
             print(frame)
 
-        for event in pg.event.get():
+        """for event in pg.event.get():
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_UP:
                     cv2.imwrite(f"training_data/avance/{i}.jpg", frame)
@@ -74,9 +81,42 @@ try:
                 if event.key == pg.K_t:
                     cv2.imwrite(f"test/img_test.jpg", frame)
                 i+=1
+        
+
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            break"""
+    
+        for event in pg.event.get():
+
+            if event.type == pg.QUIT:
+                sys.exit()
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_z:      # forward
+                    conn.sendall(b'F')
+                    print("Forward")
+                elif event.key == pg.K_s:    # backward
+                    conn.sendall(b'B')
+                    print("Backward")
+                elif event.key == pg.K_q:    # left
+                    conn.sendall(b'L')
+                    print("Left")
+                elif event.key == pg.K_d:    # right
+                    conn.sendall(b'R')
+                    print("Right")
+                elif event.key == pg.K_SPACE:
+                    conn.sendall(b'S')
+                    print("Stop")
+
+            elif event.type == pg.KEYUP:
+                # stop the car when key is released
+                conn.sendall(b'S')
+
+
+
+
+
+
 finally:
     cv2.destroyAllWindows()
     connection.close()
