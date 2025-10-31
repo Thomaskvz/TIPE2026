@@ -91,25 +91,14 @@ try:
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break"""
         arret = False
-            
+        
         for event in pg.event.get(): 
             if event.type == pg.KEYDOWN: #Possibilité d'arrêter la voiture même en mode Automatique
                 if event.key == pg.K_SPACE:
                     conn.sendall(b'S')
                     print("Stop")
                     arret = True
-            if event.type == pg.QUIT:
-                sys.exit()
-
-        
-        if mode == "a" and arret == False: #Mode Automatique
-            if pred[0] in (0,3):
-                conn.sendall(b'C')
-            conn.sendall(definition_byte[pred[0]])
-
-        if mode == "m": #Mode Manuel
-            for event in pg.event.get():
-                if event.type == pg.KEYDOWN:
+                if mode == "m":                  # Mode manuel
                     if event.key == pg.K_z:      # forward
                         conn.sendall(b'F')
                         print("Forward")
@@ -123,10 +112,20 @@ try:
                         conn.sendall(b'R')
                         print("Right")
     
-                elif event.type == pg.KEYUP:
-                    # stop the car when key is released
-                    conn.sendall(b'S')
+            elif event.type == pg.KEYUP and mode == "m":
+                # stop the car when key is released
+                conn.sendall(b'S')
 
+            elif event.type == pg.QUIT:
+                sys.exit()
+
+        
+        if mode == "a" and arret == False: #Mode Automatique
+            if pred[0] in (0,3):
+                conn.sendall(b'C')
+            conn.sendall(definition_byte[pred[0]])
+
+                    
 
 
 
@@ -137,6 +136,7 @@ finally:
     connection.close()
     conn.close()
     server_socket.close()
+
 
 
 
