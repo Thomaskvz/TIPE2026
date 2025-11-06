@@ -8,6 +8,8 @@ import pygame as pg
 import ia_image
 
 
+mode = input("Veuillez choisir le mode de controle (Automatique: a, Manuel: m, Training: t): ").lower()
+
 HOST = '' if len(sys.argv) < 2 else sys.argv[1]
 PORT = 9998 if len(sys.argv) < 3 else int(sys.argv[2])
 
@@ -28,7 +30,6 @@ i = 0
 
 test = False # A ENLEVER
 
-mode = input("Veuillez choisir le mode de controle (Automatique: a, Manuel: m): ")
 
 definition_byte = [b'F', b'R', b'L', b'B']
 
@@ -72,58 +73,61 @@ try:
         #     test = True
         #     print(frame)
 
-        """for event in pg.event.get():
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_UP:
-                    cv2.imwrite(f"training_data/avance/{i}.jpg", frame)
-                if event.key == pg.K_RIGHT:
-                    cv2.imwrite(f"training_data/droite/{i}.jpg", frame)
-                if event.key == pg.K_LEFT:
-                    cv2.imwrite(f"training_data/gauche/{i}.jpg", frame)
-                if event.key == pg.K_DOWN:
-                    cv2.imwrite(f"training_data/recule/{i}.jpg", frame)
-                if event.key == pg.K_t:
-                    cv2.imwrite(f"test/img_test.jpg", frame)
-                i+=1
-        
+
+        if mode == "t": #Mode training
+            for event in pg.event.get():
+                if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_UP:
+                        cv2.imwrite(f"training_data/avance/{i}.jpg", frame)
+                    if event.key == pg.K_RIGHT:
+                        cv2.imwrite(f"training_data/droite/{i}.jpg", frame)
+                    if event.key == pg.K_LEFT:
+                        cv2.imwrite(f"training_data/gauche/{i}.jpg", frame)
+                    if event.key == pg.K_DOWN:
+                        cv2.imwrite(f"training_data/recule/{i}.jpg", frame)
+                    if event.key == pg.K_t:
+                        cv2.imwrite(f"test/img_test.jpg", frame)
+                    i+=1
+            
 
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break"""
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
+
         arret = False
+        if mode != "t":
+            for event in pg.event.get(): 
+                if event.type == pg.KEYDOWN: #Possibilité d'arrêter la voiture même en mode Automatique
+                    if event.key == pg.K_SPACE:
+                        conn.sendall(b'S')
+                        print("Stop")
+                        arret = True
+                    if mode == "m":                  # Mode manuel
+                        if event.key == pg.K_z:      # forward
+                            conn.sendall(b'F')
+                            print("Forward")
+                        elif event.key == pg.K_s:    # backward
+                            conn.sendall(b'B')
+                            print("Backward")
+                        elif event.key == pg.K_q:    # left
+                            conn.sendall(b'L')
+                            print("Left")
+                        elif event.key == pg.K_d:    # right
+                            conn.sendall(b'R')
+                            print("Right")
         
-        for event in pg.event.get(): 
-            if event.type == pg.KEYDOWN: #Possibilité d'arrêter la voiture même en mode Automatique
-                if event.key == pg.K_SPACE:
+                elif event.type == pg.KEYUP and mode == "m":
+                    # stop the car when key is released
                     conn.sendall(b'S')
-                    print("Stop")
-                    arret = True
-                if mode == "m":                  # Mode manuel
-                    if event.key == pg.K_z:      # forward
-                        conn.sendall(b'F')
-                        print("Forward")
-                    elif event.key == pg.K_s:    # backward
-                        conn.sendall(b'B')
-                        print("Backward")
-                    elif event.key == pg.K_q:    # left
-                        conn.sendall(b'L')
-                        print("Left")
-                    elif event.key == pg.K_d:    # right
-                        conn.sendall(b'R')
-                        print("Right")
-    
-            elif event.type == pg.KEYUP and mode == "m":
-                # stop the car when key is released
-                conn.sendall(b'S')
 
-            elif event.type == pg.QUIT:
-                sys.exit()
+                elif event.type == pg.QUIT:
+                    sys.exit()
 
-        
-        if mode == "a" and arret == False: #Mode Automatique
-            if pred[0] in (0,3):
-                conn.sendall(b'C')
-            conn.sendall(definition_byte[pred[0]])
+            
+            if mode == "a" and arret == False: #Mode Automatique
+                if pred[0] in (0,3):
+                    conn.sendall(b'C')
+                conn.sendall(definition_byte[pred[0]])
 
                     
 
@@ -136,7 +140,6 @@ finally:
     connection.close()
     conn.close()
     server_socket.close()
-
 
 
 
