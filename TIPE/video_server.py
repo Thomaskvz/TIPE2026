@@ -28,8 +28,9 @@ pg.display.set_mode((250,250))
 
 i = 0
 
-test = False # A ENLEVER
+# test = False # A ENLEVER
 
+arret = False
 
 definition_byte = [b'F', b'R', b'L', b'B']
 
@@ -94,7 +95,6 @@ try:
             # if cv2.waitKey(1) & 0xFF == ord('q'):
             #     break
 
-        arret = False
         if mode != "t":
             for event in pg.event.get(): 
                 if event.type == pg.KEYDOWN: #Possibilité d'arrêter la voiture même en mode Automatique
@@ -102,7 +102,9 @@ try:
                         conn.sendall(b'S')
                         print("Stop")
                         arret = True
-                    if mode == "m":                  # Mode manuel
+                    
+                    # --- Mode Manuel ---
+                    if mode == "m":                  
                         if event.key == pg.K_z:      # forward
                             conn.sendall(b'F')
                             print("Forward")
@@ -123,8 +125,8 @@ try:
                 elif event.type == pg.QUIT:
                     sys.exit()
 
-            
-            if mode == "a" and arret == False: #Mode Automatique
+            # --- Mode Automatique ---
+            if mode == "a" and arret == False: 
                 if pred[0] in (0,3):
                     conn.sendall(b'C')
                 conn.sendall(definition_byte[pred[0]])
