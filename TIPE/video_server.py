@@ -169,6 +169,8 @@ try:
                 print(ia_image.definition[pred])
                 if pred in (0,3):
                     conn.sendall(b'C')
+                if pred[0] in (1,2):
+                    conn.sendall(b'F')
                 conn.sendall(definition_byte[pred])
 
 
