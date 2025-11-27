@@ -5,8 +5,9 @@ import cv2
 from picamera2 import Picamera2
 from libcamera import Transform
 import controle as c
+import select
 
-SERVER_IP = "192.168.1.136"  # your PC IP
+SERVER_IP = "IP"
 SERVER_PORT = 9998
 TARGET_FPS = 15.0 
 
@@ -19,7 +20,8 @@ print("Connected to server.")
 # --- Setup camera ---
 picam2 = Picamera2()
 picam2.rotate = 180
-picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
+picam2.configure(picam2.create_video_configuration(main={"size": (320, 240)}))
+# picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
 Transform(vflip=1)
 picam2.start()
 time.sleep(2)
@@ -50,22 +52,20 @@ try:
         client_socket.sendall(data)
 
         # Try receiving command (non-blocking)
-        try:
-            cmd = client_socket.recv(1)
-            if cmd:
+        ready, _, _ = select.select([client_socket], [], [], 0)
+        try: 
+            if ready:
+                cmd = client_socket.recv(1)
+                if not cmd:
+                    break
                 d = cmd.decode()
-                if d == 'F': 
-                    c.forward(); print("Forward")
-                elif d == 'B': 
-                    c.backward(); print("Backward")
-                elif d == 'L': 
-                    c.left(); print("Left")
-                elif d == 'R': 
-                    c.right(); print("Right")
-                elif d == 'S': 
-                    c.stop(); c.center(); print("Stop")
-                elif d == 'C': 
-                    c.center(); print("Center")
+                print("Received:", d)
+                if d == 'F': c.forward()
+                elif d == 'B': c.backward()
+                elif d == 'L': c.left()
+                elif d == 'R': c.right()
+                elif d == 'S': c.stop(); c.center()
+                elif d == 'C': c.center()
         except socket.timeout:
             # No command received; continue streaming
             pass
