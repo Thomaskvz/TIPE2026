@@ -12,6 +12,7 @@ import shutil
 
 mode = input("Veuillez choisir le mode de controle \n(Automatique: a, Manuel: m, Training: t, Déterministe: d): ").lower()
 
+# Demande si on veut un nouveau modèle
 if mode == "a":
     model = input("Numéro du modèle à charger (n: nouveau, 0 par défaut): ")
     if model.lower() == 'n':
@@ -22,6 +23,7 @@ if mode == "a":
         else:
             ia_image.clf = ia_image.load_model()
 
+# Possibilité de supprimer les anciennes images
 if mode == "t":
     supprimer = input("Supprimer les anciennes images de training? (o/n): ").lower()
     if supprimer == 'o':
@@ -30,6 +32,7 @@ if mode == "t":
             shutil.rmtree(dossier)
             os.makedirs(dossier)
         print("Anciennes images supprimées.")
+    i = 0 # numéro d'image
 
 HOST = '' if len(sys.argv) < 2 else sys.argv[1]
 PORT = 9998 if len(sys.argv) < 3 else int(sys.argv[2])
@@ -45,11 +48,16 @@ connection = conn.makefile('rb')
 prev_time = time.time()
 
 pg.init()
-pg.display.set_mode((250,250))
+pg.display.set_caption("Le meilleur TIPE de l'UNIVERS")
+affichage = pg.display.set_mode((320,240))
 
-i = 0
+hauteur = 120 # Hauteur pour le mode déterministe
+delayline = time.time()
 
-arret = False
+down = False # Controle de la ligne du mode déterministe
+up = False
+
+arret = False # Arrêt de la voiture
 
 definition_byte = [b'F', b'R', b'L', b'B']
 
@@ -75,7 +83,10 @@ try:
         frame = cv2.flip(frame,-1)
 
         # Afficher le flux vidéo
-        cv2.imshow('Raspberry Pi Stream (B/W)', frame)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+
+        imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
+        affichage.blit(imgpg,(0,0))
 
         
         img = frame/255
@@ -128,9 +139,38 @@ try:
                         conn.sendall(b'S')
                     if event.key == pg.K_q or event.key == pg.K_d:
                         conn.sendall(b'C')
-
+            
+#! ---- MODE DETERMINISTE ----
+                if event.type == pg.KEYDOWN and mode == "d":
+                    if event.key == pg.K_UP:
+                        up = True
+                    if event.key == pg.K_DOWN:
+                        down = True
+                if event.type == pg.KEYUP and mode == "d":
+                    if event.key == pg.K_UP:
+                        up = False
+                    if event.key == pg.K_DOWN:
+                        down = False
                 elif event.type == pg.QUIT:
+                    pg.quit()
                     sys.exit()
+
+            if mode == "d" and arret == False:
+                pg.draw.line(affichage, (0,255,0), (0,hauteur), (320,hauteur))
+                if down and time.time() > delayline + 0.01 and hauteur < 240 - 1:
+                    delayline = time.time()
+                    hauteur+=1
+                    print(hauteur)
+                if up and time.time() > delayline + 0.01 and hauteur > 0:
+                    delayline = time.time()
+                    hauteur-=1
+                    print(hauteur)
+                pred = predDet(img, hauteur)
+                print(ia_image.definition[pred])
+                if pred in (0,3):
+                    conn.sendall(b'C')
+                conn.sendall(definition_byte[pred])
+
 
 #! ---- MODE AUTOMATIQUE ----
             if mode == "a" and arret == False: 
@@ -141,14 +181,9 @@ try:
                 if pred[0] in (1,2):
                     conn.sendall(b'F')
                 conn.sendall(definition_byte[pred[0]])
-            
-#! ---- MODE DETERMINISTE ----
-            if mode == "d" and arret == False: 
-                pred = predDet(img)
-                print(ia_image.definition[pred])
-                if pred in (0,3):
-                    conn.sendall(b'C')
-                conn.sendall(definition_byte[pred])
+
+
+        pg.display.flip() # Met à jour la fenêtre pygame
 
 
 finally:

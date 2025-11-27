@@ -7,7 +7,8 @@ from libcamera import Transform
 import controle as c
 import select
 
-SERVER_IP = "IP"
+# SERVER_IP = "172.20.10.5"
+SERVER_IP = "192.168.1.136"
 SERVER_PORT = 9998
 TARGET_FPS = 15.0 
 
