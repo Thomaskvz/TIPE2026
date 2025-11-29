@@ -69,6 +69,17 @@ def predict_image(img_path, model):
     pred = model.predict(img.flatten().reshape(1,-1))
     return pred
 
+def init():
+    model = input("Numéro du modèle à charger (n: nouveau, 0 par défaut): ")
+    if model.lower() == 'n':
+        clf = train()
+    else:
+        if model.isdigit():
+            clf = load_model(int(model))
+        else:
+            clf = load_model()
+    return clf
+
 # test_prediction = predict_image("test/img_test.jpg", clf)
 # print(f"Prédiciton: {definition[test_prediction[0]]}")
 

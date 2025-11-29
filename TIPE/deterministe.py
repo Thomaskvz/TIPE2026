@@ -1,3 +1,6 @@
+import pygame as pg
+import sys
+
 def predDet(img,hauteur):
     i = 0
     while i < len(img[0]) and img[hauteur,i] < 0.8:
@@ -26,6 +29,27 @@ def predDet(img,hauteur):
     #     return 2
     # else:
     #     return 3
+
+
+def controle():
+    for event in pg.event.get(): 
+        if event.type == pg.KEYDOWN:    #Possibilité d'arrêter la voiture même en mode Automatique
+            if event.key == pg.K_SPACE:
+                print("Stop")
+                return 0
+            if event.key == pg.K_UP:
+                return 1
+            if event.key == pg.K_DOWN:
+                return 2
+        if event.type == pg.KEYUP:
+            if event.key == pg.K_UP:
+                return 3
+            if event.key == pg.K_DOWN:
+                return 4
+        elif event.type == pg.QUIT:
+            pg.quit()
+            sys.exit()
+    
     
 if __name__ == "__main__":
     import cv2
