@@ -38,14 +38,14 @@ def controle():
                 print("Stop")
                 return 0
             if event.key == pg.K_UP:
-                return 1
+                return "up", True
             if event.key == pg.K_DOWN:
-                return 2
+                return "down", True
         if event.type == pg.KEYUP:
             if event.key == pg.K_UP:
-                return 3
+                return "up", False
             if event.key == pg.K_DOWN:
-                return 4
+                return "down", False
         elif event.type == pg.QUIT:
             pg.quit()
             sys.exit()

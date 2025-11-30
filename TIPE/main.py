@@ -47,8 +47,10 @@ affichage = pg.display.set_mode((320,240))
 hauteur = 120 # Hauteur pour le mode déterministe
 delayline = time.time()
 
-down = False # Controle de la ligne du mode déterministe
-up = False
+controle_d = {     # Controle de la ligne du mode déterministe
+    "down": False,
+    "up": False
+}
 
 arret = False # Arrêt de la voiture
 
@@ -95,45 +97,39 @@ try:
             
 #! ---- MODE DETERMINISTE ----
         if mode == "d":
-            dctrl = deterministe.controle()
+            dctrl, val = deterministe.controle()
             if dctrl == 0: #Stop
                 conn.sendall(b'S')
                 arret = True
-            if dctrl == 1:
-                up = True
-            if dctrl == 2:
-                down == True
-            if dctrl == 3:
-                up == False
-            if dctrl == 4:
-                down == False
+            else:
+                controle_d[dctrl] = val
 
             if not arret:
                 pg.draw.line(affichage, (0,255,0), (0,hauteur), (320,hauteur))
-                if down and time.time() > delayline + 0.01 and hauteur < 240 - 1:
+                if controle_d["down"] and time.time() > delayline + 0.02 and hauteur < 240 - 1:
                     delayline = time.time()
                     hauteur+=1
                     print(hauteur)
-                if up and time.time() > delayline + 0.01 and hauteur > 0:
+                if controle_d["up"] and time.time() > delayline + 0.02 and hauteur > 0:
                     delayline = time.time()
                     hauteur-=1
                     print(hauteur)
                 pred = deterministe.predDet(img, hauteur)
                 print(ia_image.definition[pred])
-                if pred in (0,3):
+                if pred in (0,3):    # Centre les roues pour avancer ou reculer
                     conn.sendall(b'C')
-                if pred[0] in (1,2):
+                if pred in (1,2):    # Avance les roues pour droite et gauche
                     conn.sendall(b'F')
                 conn.sendall(definition_byte[pred])
 
 
 #! ---- MODE AUTOMATIQUE ----
-            if mode == "a" and arret == False: 
+            if mode == "a" and not arret: 
                 pred = ia_image.clf.predict(img[120:,:].flatten().reshape(1,-1))
                 print(ia_image.definition[pred[0]])
-                if pred[0] in (0,3):
+                if pred[0] in (0,3):    # Centre les roues pour avancer ou reculer
                     conn.sendall(b'C')
-                if pred[0] in (1,2):
+                if pred[0] in (1,2):    # Avance les roues pour droite et gauche
                     conn.sendall(b'F')
                 conn.sendall(definition_byte[pred[0]])
 
