@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 import os
-# from sklearn.svm import SVC
+from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import joblib
@@ -39,12 +40,13 @@ def train():
     print("Entraînement du modèle...")
 
     # clf = SVC(kernel='linear')
-    clf = MLPClassifier(
-        hidden_layer_sizes=(128,),  # one hidden layer
-        activation='relu',
-        solver='adam',
-        max_iter=300
-    )
+    # clf = MLPClassifier(
+    #     hidden_layer_sizes=(128,),  # one hidden layer
+    #     activation='relu',
+    #     solver='adam',
+    #     max_iter=300
+    # )
+    clf = KNeighborsClassifier(n_neighbors=5)
     clf.fit(X_train, y_train)
 
     y_pred = clf.predict(X_test)
@@ -71,4 +73,3 @@ def predict_image(img_path, model):
 
 # test_prediction = predict_image("test/img_test.jpg", clf)
 # print(f"Prédiciton: {definition[test_prediction[0]]}")
-
