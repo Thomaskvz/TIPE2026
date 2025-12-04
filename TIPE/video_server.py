@@ -53,6 +53,7 @@ affichage = pg.display.set_mode((320,240))
 
 hauteur = 120 # Hauteur pour le mode déterministe
 delayline = time.time()
+delaycontrol = time.time()
 
 down = False # Controle de la ligne du mode déterministe
 up = False
@@ -93,7 +94,8 @@ try:
 
 
 #! ---- MODE TRAINING ----
-        if mode == "t": 
+        if mode == "t" and delaycontrol + 0.1 < time.time():
+            delaycontrol = time.time() 
             for event in pg.event.get():
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_UP:
@@ -119,7 +121,8 @@ try:
                         arret = True
                     
 #! ---- MODE MANUEL ----
-                    if mode == "m":                  
+                    if mode == "m" and delaycontrol + 0.1 < time.time():
+                        delaycontrol = time.time()                  
                         if event.key == pg.K_z:      # forward
                             conn.sendall(b'F')
                             print("Forward")
@@ -157,25 +160,28 @@ try:
 
             if mode == "d" and arret == False:
                 pg.draw.line(affichage, (0,255,0), (0,hauteur), (320,hauteur))
-                if down and time.time() > delayline + 0.01 and hauteur < 240 - 1:
+                if down and time.time() > delayline + 0.001 and hauteur < 240 - 1:
                     delayline = time.time()
                     hauteur+=1
                     print(hauteur)
-                if up and time.time() > delayline + 0.01 and hauteur > 0:
+                if up and time.time() > delayline + 0.001 and hauteur > 0:
                     delayline = time.time()
                     hauteur-=1
                     print(hauteur)
-                pred = predDet(img, hauteur)
-                print(ia_image.definition[pred])
-                if pred in (0,3):
-                    conn.sendall(b'C')
-                if pred[0] in (1,2):
-                    conn.sendall(b'F')
-                conn.sendall(definition_byte[pred])
+                if delaycontrol + 0.1 < time.time():
+                    delaycontrol = time.time()
+                    pred = predDet(img, hauteur)
+                    print(ia_image.definition[pred])
+                    if pred in (0,3):
+                        conn.sendall(b'C')
+                    if pred in (1,2):
+                        conn.sendall(b'F')
+                    conn.sendall(definition_byte[pred])
 
 
 #! ---- MODE AUTOMATIQUE ----
-            if mode == "a" and arret == False: 
+            if mode == "a" and arret == False and delaycontrol + 0.1 < time.time():
+                delaycontrol = time.time() 
                 pred = ia_image.clf.predict(img[120:,:].flatten().reshape(1,-1))
                 print(ia_image.definition[pred[0]])
                 if pred[0] in (0,3):
@@ -193,6 +199,5 @@ finally:
     connection.close()
     conn.close()
     server_socket.close()
-
 
 
