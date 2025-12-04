@@ -4,14 +4,14 @@ def predDet(img,hauteur):
         i += 1
     if i == len(img[0]):        # Pas de blanc: Recule
         return 3
-    if i >= len(img[0])//2:     # Blanc à droite: Droite
+    if (3/5)*len(img[0])//2 >= i >= len(img[0])//2:     # Blanc à droite: Droite
         return 2
     
     j = len(img[0]) -1
     while j < len(img[0]) and img[hauteur,j] < 0.8:
         j -= 1
 
-    if j < len(img[0])//2:     # Blanc à gauche: Gauche
+    if (2/5)*len(img[0])//2 < j < len(img[0])//2:     # Blanc à gauche: Gauche
         return 1
     
     else:                      # Blanc aux 2: Avance
