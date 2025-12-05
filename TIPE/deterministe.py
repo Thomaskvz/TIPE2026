@@ -1,56 +1,79 @@
 import pygame as pg
-import sys
+import time
 
-def predDet(img,hauteur):
-    i = 0
-    while i < len(img[0]) and img[hauteur,i] < 0.8:
-        i += 1
-    if i == len(img[0]):        # Pas de blanc: Recule
-        return 3
-    if i >= len(img[0])//2:     # Blanc à droite: Droite
+def predDet(img, hauteur, ecartement, mode=1):
+    if mode == 1:
+        blanc = 0
+        while blanc < len(img[0]) and img[hauteur,blanc] < 0.8:
+            blanc += 1
+        if blanc == len(img[0]):        # Pas de blanc: Recule
+            return 3
+        if blanc >= len(img[0])//2:     # Blanc à droite: Droite
+            return 2
+        blanc = len(img[0]) -1
+        while blanc < len(img[0]) and img[hauteur,blanc] < 0.8:
+            blanc -= 1
+        if blanc < len(img[0])//2:      # Blanc à gauche: Gauche
+            return 1
+        else:                           # Blanc aux 2: Avance
+            return 0
+    
+    if mode == 2:
+        if img[hauteur, ecartement] > 0.7 and img[hauteur, len(img)-ecartement] > 0.7:
+            return 0
+        if img[hauteur, ecartement] > 0.7:
+            return 1
+        if img[hauteur, len(img)-ecartement] > 0.7:
+            return 2
+        else:
+            return 3
+
+def controle(event):
+    if event.type == pg.KEYDOWN:    #Possibilité d'arrêter la voiture même en mode Automatique
+        if event.key == pg.K_SPACE:
+            print("Stop")
+            return 0
+        if event.key == pg.K_UP:
+            return "up", True
+        if event.key == pg.K_DOWN:
+            return "down", True
+        if event.key == pg.K_RIGHT:
+            return "right", True
+        if event.key == pg.K_LEFT:
+            return "left", True
+    if event.type == pg.KEYUP:
+        if event.key == pg.K_UP:
+            return "up", False
+        if event.key == pg.K_DOWN:
+            return "down", False
+        if event.key == pg.K_RIGHT:
+            return "right", False
+        if event.key == pg.K_LEFT:
+            return "left", False
+        
+def main(delayline, controle_d, hauteur, ecartement, width, height):
+    curtime = time.time()
+    if controle_d["down"] and curtime > delayline + 0.001 and hauteur < height - 1:
+        hauteur+=1
+        return curtime, hauteur, ecartement
+    if controle_d["up"] and curtime > delayline + 0.001 and hauteur > 0:
+        hauteur-=1
+        return curtime, hauteur, ecartement
+    if controle_d["right"] and curtime > delayline + 0.001 and ecartement < width//2 - 1:
+        ecartement+=1
+        return curtime, hauteur, ecartement
+    if controle_d["left"] and curtime > delayline + 0.001 and ecartement > 0:
+        ecartement-=1
+        return curtime, hauteur, ecartement
+
+    
+def init():
+    mode = input('Choisissez la version du mode déterministe (p: point ou l: ligne): ')
+    if mode == "p":
         return 2
-    
-    j = len(img[0]) -1
-    while j < len(img[0]) and img[hauteur,j] < 0.8:
-        j -= 1
-
-    if j < len(img[0])//2:     # Blanc à gauche: Gauche
-        return 1
-    
-    else:                      # Blanc aux 2: Avance
-        return 0
-    
-
-    # if img[240, 50] > 0.7 and img[240, 540] > 0.7:
-    #     return 0
-    # if img[240, 50] > 0.7:
-    #     return 1
-    # if img[240, 540] > 0.7:
-    #     return 2
-    # else:
-    #     return 3
+    return 1
 
 
-def controle():
-    for event in pg.event.get(): 
-        if event.type == pg.KEYDOWN:    #Possibilité d'arrêter la voiture même en mode Automatique
-            if event.key == pg.K_SPACE:
-                print("Stop")
-                return 0
-            if event.key == pg.K_UP:
-                return "up", True
-            if event.key == pg.K_DOWN:
-                return "down", True
-        if event.type == pg.KEYUP:
-            if event.key == pg.K_UP:
-                return "up", False
-            if event.key == pg.K_DOWN:
-                return "down", False
-        elif event.type == pg.QUIT:
-            pg.quit()
-            sys.exit()
-    
-    
 if __name__ == "__main__":
     import cv2
     import numpy as np
@@ -62,7 +85,7 @@ if __name__ == "__main__":
 
 
     print(test_img[240, 50], test_img[240, 540])
-    prediction = predDet(test_img, 200)
+    prediction = predDet(test_img, 120, 50, 1)
     definition = ["Avance", "Droite", "Gauche", "Recule"]
     print(f"Prédiction déterministe: {definition[prediction]}")
 

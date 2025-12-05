@@ -21,6 +21,8 @@ if mode == "a":
 if mode == "t":
     training.init()
 
+if mode == "d":
+    modedet = deterministe.init()
 
 # Connection au socket
 
@@ -42,14 +44,19 @@ prev_time = time.time()
 
 pg.init()
 pg.display.set_caption("Le meilleur TIPE de l'UNIVERS")
-affichage = pg.display.set_mode((320,240))
+height = 240
+width = 320
+affichage = pg.display.set_mode((width,height))
 
-hauteur = 120 # Hauteur pour le mode déterministe
+hauteur = 200 # Hauteur pour le mode déterministe
+ecartement = 50
 delayline = time.time()
 
 controle_d = {     # Controle de la ligne du mode déterministe
     "down": False,
-    "up": False
+    "up": False,
+    "right": False,
+    "left": False
 }
 
 arret = False # Arrêt de la voiture
@@ -86,35 +93,37 @@ try:
         
         img = frame/255
 
+#? ---- Boutons de controle pygame ----
+        for event in pg.event.get():
+            if event.type == pg.QUIT: # Ferme la fenêtre
+                pg.quit()
+                sys.exit()
 
 #! ---- MODE TRAINING ----
-        if mode == "t": 
-            training.main(frame)
+            if mode == "t": 
+                training.main(frame, event)
                     
 #! ---- MODE MANUEL ----
-        if mode == "m":
-            conn.sendall(manuel.main())
+            if mode == "m":
+                conn.sendall(manuel.main(event))
             
 #! ---- MODE DETERMINISTE ----
+            if mode == "d":
+                dctrl, val = deterministe.controle(event)
+                if dctrl == 0: # Stop
+                    conn.sendall(b'S')
+                    arret = True
+                else:
+                    controle_d[dctrl] = val
         if mode == "d":
-            dctrl, val = deterministe.controle()
-            if dctrl == 0: #Stop
-                conn.sendall(b'S')
-                arret = True
-            else:
-                controle_d[dctrl] = val
-
             if not arret:
-                pg.draw.line(affichage, (0,255,0), (0,hauteur), (320,hauteur))
-                if controle_d["down"] and time.time() > delayline + 0.02 and hauteur < 240 - 1:
-                    delayline = time.time()
-                    hauteur+=1
-                    print(hauteur)
-                if controle_d["up"] and time.time() > delayline + 0.02 and hauteur > 0:
-                    delayline = time.time()
-                    hauteur-=1
-                    print(hauteur)
-                pred = deterministe.predDet(img, hauteur)
+                if modedet == 1:
+                    pg.draw.line(affichage, (0,255,0), (0,hauteur), (width,hauteur))
+                if modedet == 2:
+                    pg.draw.circle(affichage, (0,255,0), (ecartement,hauteur), 3)
+                    pg.draw.circle(affichage, (0,255,0), (width-ecartement,hauteur), 3)
+                delayline, hauteur, ecartement = deterministe.main(delayline, controle_d, hauteur, ecartement, width, height)
+                pred = deterministe.predDet(img, hauteur, ecartement, modedet)
                 print(ia_image.definition[pred])
                 if pred in (0,3):    # Centre les roues pour avancer ou reculer
                     conn.sendall(b'C')
@@ -125,7 +134,7 @@ try:
 
 #! ---- MODE AUTOMATIQUE ----
             if mode == "a" and not arret: 
-                pred = ia_image.clf.predict(img[120:,:].flatten().reshape(1,-1))
+                pred = ia_image.clf.predict(img[height//2:,:].flatten().reshape(1,-1))
                 print(ia_image.definition[pred[0]])
                 if pred[0] in (0,3):    # Centre les roues pour avancer ou reculer
                     conn.sendall(b'C')
