@@ -106,7 +106,7 @@ try:
 #! ---- MODE TRAINING ----
             if mode == "t" and delaycontrol + 0.1 < time.time():
                 delaycontrol = time.time()
-                i = training.main(frame, event,i)
+                i += training.main(frame, event, i)
                     
 #! ---- MODE MANUEL ----
             if mode == "m" and delaycontrol + 0.1 < time.time():
@@ -131,7 +131,7 @@ try:
                     pg.draw.line(affichage, (0,255,0), (0,hauteur), (width,hauteur))
                 if modedet == 2:
                     pg.draw.circle(affichage, (0,255,0), (ecartement,hauteur), 3)
-                    # pg.draw.circle(affichage, (0,255,0), (width-ecartement,hauteur), 3)
+                    pg.draw.circle(affichage, (0,255,0), (width-ecartement,hauteur), 3)
                 dmain = deterministe.main(delayline, controle_d, hauteur, ecartement, width, height)
 
                 if dmain != None:
@@ -139,7 +139,7 @@ try:
                 
                 if delaycontrol + 0.1 < time.time():
                     delaycontrol = time.time()
-                    pred = deterministe.predDet(img, hauteur, ecartement, modedet)
+                    pred = deterministe.predDet(img, hauteur, ecartement, seuil, modedet)
                     if pred != None:
                         print(ia_image.definition[pred])
                         if pred in (0,3):    # Centre les roues pour avancer ou reculer

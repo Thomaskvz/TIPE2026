@@ -1,17 +1,17 @@
 import pygame as pg
 import time
 
-def predDet(img, hauteur, ecartement, mode=1):
+def predDet(img, hauteur, ecartement, seuil, mode=1):
     if mode == 1:
         blanc = 0
-        while blanc < len(img[0]) and img[hauteur,blanc] < 0.8:
+        while blanc < len(img[0]) and img[hauteur,blanc] < seuil:
             blanc += 1
         if blanc == len(img[0]):        # Pas de blanc: Recule
             return 3
         if blanc >= len(img[0])//2:     # Blanc à droite: Droite
             return 2
         blanc = len(img[0]) -1
-        while blanc < len(img[0]) and img[hauteur,blanc] < 0.8:
+        while blanc < len(img[0]) and img[hauteur,blanc] < seuil:
             blanc -= 1
         if blanc < len(img[0])//2:      # Blanc à gauche: Gauche
             return 1
@@ -19,11 +19,11 @@ def predDet(img, hauteur, ecartement, mode=1):
             return 0
     
     if mode == 2:
-        if img[hauteur, ecartement] > 0.7 and img[hauteur, len(img)-ecartement] > 0.7:
+        if img[hauteur, ecartement] > seuil and img[hauteur, len(img)-ecartement] > seuil:
             return 0
-        if img[hauteur, ecartement] > 0.7:
+        if img[hauteur, ecartement] > seuil:
             return 1
-        if img[hauteur, len(img)-ecartement] > 0.7:
+        if img[hauteur, len(img)-ecartement] > seuil:
             return 2
         else:
             return 3
@@ -53,30 +53,30 @@ def controle(event):
         
 def main(delayline, controle_d, hauteur, ecartement, width, height):
     curtime = time.time()
-    if controle_d["down"] and curtime > delayline + 0.001 and hauteur < height - 1:
+    if controle_d["down"] and curtime > delayline + 0.01 and hauteur < height - 1:
         hauteur+=1
         return curtime, hauteur, ecartement
-    if controle_d["up"] and curtime > delayline + 0.001 and hauteur > 0:
+    if controle_d["up"] and curtime > delayline + 0.01 and hauteur > 0:
         hauteur-=1
         return curtime, hauteur, ecartement
-    if controle_d["right"] and curtime > delayline + 0.001 and ecartement < width//2 - 1:
+    if controle_d["right"] and curtime > delayline + 0.01 and ecartement < width//2 - 1:
         ecartement+=1
         return curtime, hauteur, ecartement
-    if controle_d["left"] and curtime > delayline + 0.001 and ecartement > 0:
+    if controle_d["left"] and curtime > delayline + 0.01 and ecartement > 0:
         ecartement-=1
         return curtime, hauteur, ecartement
 
     
 def init():
     mode = input('Choisissez la version du mode déterministe (p: point ou l: ligne): ')
+    seuil = input('Choisissez le seuil de détection des lignes blanches (ex: 0.8): ')
     if mode == "p":
-        return 2
-    return 1
+        return 2, float(seuil)
+    return 1, float(seuil)
 
 
 if __name__ == "__main__":
     import cv2
-    import numpy as np
 
     dossier = "training_data/gauche"
     nom = "156"
