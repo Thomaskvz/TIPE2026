@@ -25,3 +25,4 @@ def main(event):
             return b'S'
         if event.key == pg.K_q or event.key == pg.K_d:
             return b'C'
+    return b''
