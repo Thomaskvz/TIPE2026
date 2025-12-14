@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 import os
-from sklearn.svm import SVC
-from sklearn.neural_network import MLPClassifier
+# from sklearn.svm import SVC
+# from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -26,15 +26,16 @@ def train():
     data_gauche = charge_data("training_data/gauche")
     data_recule = charge_data("training_data/recule")
 
-    print(len(data_avance))
-    print(len(data_avance) + len(data_droite) + len(data_gauche) + len(data_recule))
+    print(f"Nombre d'images avance: {len(data_avance)}")
+    print(f"Nombre d'images total: {len(data_avance) + len(data_droite) + len(data_gauche) + len(data_recule)}")
 
+    print("Compilation des images...")
     X = np.vstack((data_avance,data_droite,data_gauche,data_recule))
+    print("Attribution des valeurs...")
     y = np.array([0]*len(data_avance) + [1]*len(data_droite) + [2]*len(data_gauche) + [3]*len(data_recule))
 
-    print(len(X))
-    print(len(y))
-
+    print("Séparation en images d'entrainement et de test...")
+    # 20% des images sont utilisées en tant que test
     X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2, random_state=42)
 
     print("Entraînement du modèle...")
@@ -71,5 +72,23 @@ def predict_image(img_path, model):
     pred = model.predict(img.flatten().reshape(1,-1))
     return pred
 
-# test_prediction = predict_image("test/img_test.jpg", clf)
-# print(f"Prédiciton: {definition[test_prediction[0]]}")
+def init():
+    model = input("Numéro du modèle à charger (n: nouveau, 0 par défaut): ")
+    if model.lower() == 'n':
+        clf = train()
+    else:
+        if model.isdigit():
+            clf = load_model(int(model))
+        else:
+            clf = load_model()
+    return clf
+
+
+if __name__ == "__main__":
+    model = input("Choix du numéro du modèle (n: nouveau): ")
+    if model == "n":
+        clf = train()
+    else:
+        clf = load_model(int(model))
+    test_prediction = predict_image("test/img_test.jpg", clf)
+    print(f"Prédiciton: {definition[test_prediction[0]]}")
