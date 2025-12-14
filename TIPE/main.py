@@ -45,8 +45,14 @@ prev_time = time.time()
 pg.init()
 pg.display.set_caption("Le meilleur TIPE de l'UNIVERS")
 height = 240
-width = 320
+width = 640
 affichage = pg.display.set_mode((width,height))
+
+text_font = pg.font.SysFont("Arial", 18)
+
+def affiche_texte(text, font, text_col, x, y):
+    img = font.render(text, True, text_col)
+    affichage.blit(img, (x,y))
 
 hauteur = 200 # Hauteur pour le mode déterministe
 ecartement = 100 # Ecartement pour le mode déterministe
@@ -63,12 +69,15 @@ controle_d = {     # Controle de la ligne du mode déterministe
 arret = False # Arrêt de la voiture
 
 definition_byte = [b'F', b'R', b'L', b'B']
+pred = 3
 
 dctrl = None
 val = False
 
 try:
     while True:
+        affichage.fill((0,0,0))
+
         image_len_data = connection.read(struct.calcsize('<L'))
         if not image_len_data:
             break
@@ -76,7 +85,7 @@ try:
         if not image_len:
             break
 
-        # Lecture des données de l'image
+        # * Lecture des données de l'image
         data = b''
         while len(data) < image_len:
             more = connection.read(image_len - len(data))
@@ -84,16 +93,15 @@ try:
                 break
             data += more
 
-        # Decode les bytes en image
+        # * Decode les bytes en image
         frame = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
         frame = cv2.flip(frame,-1)
+        hframe, wframe = frame.shape
 
-        # Afficher le flux vidéo
+        # * Transforme l'image en surface pygame pour afficher le flux vidéo
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
         imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
-        affichage.blit(imgpg,(0,0))
-
         
         img = frame/255
 
@@ -104,13 +112,13 @@ try:
                 sys.exit()
 
 #! ---- MODE TRAINING ----
-            if mode == "t" and delaycontrol + 0.1 < time.time():
-                delaycontrol = time.time()
-                i += training.main(frame, event, i)
+            if mode == "t": # and delaycontrol + 0.1 < time.time():
+                # delaycontrol = time.time()
+                i += training.main(frame, event, i) # i est le nombre de photos
                     
 #! ---- MODE MANUEL ----
-            if mode == "m" and delaycontrol + 0.1 < time.time():
-                delaycontrol = time.time()
+            if mode == "m": # and delaycontrol + 0.1 < time.time():
+                # delaycontrol = time.time()
                 controlemanuel = manuel.main(event)
                 if controlemanuel != b'':
                     conn.sendall(manuel.main(event))
@@ -128,32 +136,33 @@ try:
         if mode == "d":
             if not arret:
                 if modedet == 1:
-                    pg.draw.line(affichage, (0,255,0), (0,hauteur), (width,hauteur))
+                    pg.draw.line(imgpg, (0,255,0), (0,hauteur), (wframe,hauteur))
                 if modedet == 2:
-                    pg.draw.circle(affichage, (0,255,0), (ecartement,hauteur), 3)
-                    pg.draw.circle(affichage, (0,255,0), (width-ecartement,hauteur), 3)
-                dmain = deterministe.main(delayline, controle_d, hauteur, ecartement, width, height)
+                    pg.draw.circle(imgpg, (0,255,0), (ecartement,hauteur), 3)
+                    pg.draw.circle(imgpg, (0,255,0), (wframe-ecartement,hauteur), 3)
+                dmain = deterministe.main(delayline, controle_d, hauteur, ecartement, wframe, hframe)
 
                 if dmain != None:
                     delayline, hauteur, ecartement = dmain
                 
                 if delaycontrol + 0.1 < time.time():
                     delaycontrol = time.time()
-                    pred = deterministe.predDet(img, hauteur, ecartement, seuil, modedet)
-                    if pred != None:
-                        print(ia_image.definition[pred])
-                        if pred in (0,3):    # Centre les roues pour avancer ou reculer
-                            conn.sendall(b'C')
-                        if pred in (1,2):    # Avance les roues pour droite et gauche
-                            conn.sendall(b'F')
-                        conn.sendall(definition_byte[pred])
+                    npred = deterministe.predDet(img, hauteur, ecartement, seuil, modedet)
+                    if npred != None:
+                        pred = npred
+                    print(ia_image.definition[pred])
+                    if pred in (0,3):    # Centre les roues pour avancer ou reculer
+                        conn.sendall(b'C')
+                    if pred in (1,2):    # Avance les roues pour droite et gauche
+                        conn.sendall(b'F')
+                    conn.sendall(definition_byte[pred])
 
 
 #! ---- MODE AUTOMATIQUE ----
             
         if mode == "a" and not arret and delaycontrol + 0.1 < time.time():
             delaycontrol = time.time() 
-            pred = ia_image.clf.predict(img[height//2:,:].flatten().reshape(1,-1))
+            pred = ia_image.clf.predict(img[hframe//2:,:].flatten().reshape(1,-1))
             print(ia_image.definition[pred[0]])
             if pred[0] in (0,3):    # Centre les roues pour avancer ou reculer
                 conn.sendall(b'C')
@@ -161,7 +170,13 @@ try:
                 conn.sendall(b'F')
             conn.sendall(definition_byte[pred[0]])
 
-
+#? ---- Affichage ----
+        affichage.blit(imgpg,(0,0))
+        affiche_texte(f"Mode: {mode}", text_font, (255, 255, 255), wframe+2,2)
+        if mode == "d":
+            affiche_texte(f"Prédiction: {ia_image.definition[pred]}", text_font, (255,255,255), wframe+2, 20)
+        if mode == "a":
+            affiche_texte(f"Prédiction: {ia_image.definition[pred[0]]}", text_font, (255,255,255), wframe+2, 20)
         pg.display.flip() # Met à jour la fenêtre pygame
 
 
