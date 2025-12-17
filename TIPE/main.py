@@ -15,6 +15,7 @@ mode = input("Veuillez choisir le mode de controle \n(Automatique: a, Manuel: m,
 
 # Choix du modèle à charger
 if mode == "a":
+    pred = [3]
     ia_image.clf = ia_image.init()
 
 # Possibilité de supprimer les anciennes images en mode training
@@ -22,6 +23,7 @@ if mode == "t":
     i = training.init()
 
 if mode == "d":
+    pred = 3
     modedet,seuil = deterministe.init()
 
 # Connection au socket
@@ -69,7 +71,6 @@ controle_d = {     # Controle de la ligne du mode déterministe
 arret = False # Arrêt de la voiture
 
 definition_byte = [b'F', b'R', b'L', b'B']
-pred = 3
 
 dctrl = None
 val = False
@@ -112,6 +113,7 @@ try:
                 sys.exit()
 
 #! ---- MODE TRAINING ----
+            # TODO Commentaires à enlever si ne pose pas de problème
             if mode == "t": # and delaycontrol + 0.1 < time.time():
                 # delaycontrol = time.time()
                 i += training.main(frame, event, i) # i est le nombre de photos
@@ -133,6 +135,7 @@ try:
                     arret = True
                 else:
                     controle_d[dctrl] = val
+        
         if mode == "d":
             if not arret:
                 if modedet == 1:
@@ -159,7 +162,6 @@ try:
 
 
 #! ---- MODE AUTOMATIQUE ----
-            
         if mode == "a" and not arret and delaycontrol + 0.1 < time.time():
             delaycontrol = time.time() 
             pred = ia_image.clf.predict(img[hframe//2:,:].flatten().reshape(1,-1))
