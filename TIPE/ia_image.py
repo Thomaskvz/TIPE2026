@@ -54,10 +54,11 @@ def train():
 
     print(f"Précision: {accuracy_score(y_test, y_pred)}")
 
-    num = len(os.listdir("models"))
-    joblib.dump(clf, f"models/ia_model{num}.pkl")
-
-    print(f"Modèle {num} sauvegardé!")
+    sauvegarde = input("Sauvegarder le modèle ? (o/n): ")
+    if sauvegarde.lower() == 'o' or sauvegarde == '':
+        num = len(os.listdir("models"))
+        joblib.dump(clf, f"models/ia_model{num}.pkl")
+        print(f"Modèle {num} sauvegardé!")
 
     return clf
 
@@ -73,8 +74,8 @@ def predict_image(img_path, model):
     return pred
 
 def init():
-    model = input("Numéro du modèle à charger (n: nouveau, 0 par défaut): ")
-    if model.lower() == 'n':
+    model = input("Numéro du modèle à charger (n: nouveau par défaut): ")
+    if model.lower() == 'n' or model == '':
         clf = train()
     else:
         if model.isdigit():
