@@ -18,7 +18,7 @@ def init():
     dossiers = ["training_data/avance", "training_data/droite", "training_data/gauche", "training_data/recule"]
     i = 0
     for dossier in dossiers:
-        i += len(os.listdir(dossiers))
+        i += len(os.listdir(dossier))
     return i
 
 def main(frame, event, i):

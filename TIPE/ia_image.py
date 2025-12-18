@@ -47,7 +47,7 @@ def train():
     #     solver='adam',
     #     max_iter=300
     # )
-    clf = KNeighborsClassifier(n_neighbors=5)
+    clf = KNeighborsClassifier(n_neighbors=7)
     clf.fit(X_train, y_train)
 
     y_pred = clf.predict(X_test)

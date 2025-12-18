@@ -50,7 +50,7 @@ height = 240
 width = 640
 affichage = pg.display.set_mode((width,height))
 
-text_font = pg.font.SysFont("Arial", 18)
+text_font = pg.font.SysFont("Helvetica", 18)
 
 def affiche_texte(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
@@ -70,7 +70,7 @@ controle_d = {     # Controle de la ligne du mode déterministe
 
 arret = False # Arrêt de la voiture
 
-definition_byte = [b'F', b'R', b'L', b'B']
+definition_byte = [b'F', b'R', b'L', b'S']
 
 dctrl = None
 val = False
@@ -119,7 +119,7 @@ try:
                 i += training.main(frame, event, i) # i est le nombre de photos
                     
 #! ---- MODE MANUEL ----
-            if mode == "m": # and delaycontrol + 0.1 < time.time():
+            if mode == "m" or mode == "t": # and delaycontrol + 0.1 < time.time():
                 # delaycontrol = time.time()
                 controlemanuel = manuel.main(event)
                 if controlemanuel != b'':
