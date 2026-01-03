@@ -11,12 +11,14 @@ import training
 import manuel
 
 # Choix du mode de controle ou training
-mode = input("Veuillez choisir le mode de controle \n(Automatique: a, Manuel: m, Training: t, Déterministe: d): ").lower()
+mode = input("Veuillez choisir le mode de controle \n(Automatique: a, Manuel: m, Training: t, Déterministe: d, TensorFlow: f):").lower()
 
 # Choix du modèle à charger
 if mode == "a":
     pred = [3]
     ia_image.clf = ia_image.init()
+
+
 
 # Possibilité de supprimer les anciennes images en mode training
 if mode == "t":
@@ -29,10 +31,11 @@ if mode == "d":
 # Connection au socket
 
 HOST = '' if len(sys.argv) < 2 else sys.argv[1]
-PORT = 9998 if len(sys.argv) < 3 else int(sys.argv[2])
+PORT = 9991 if len(sys.argv) < 3 else int(sys.argv[2])
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((HOST, PORT))
+
 server_socket.listen(0)
 print(f"Ecoute {HOST}:{PORT}...")
 conn, addr = server_socket.accept()
@@ -40,6 +43,15 @@ print("Connecté par", addr)
 
 connection = conn.makefile('rb')
 prev_time = time.time()
+
+if mode == "f":
+    import train_rl
+    train_rl.train(conn, connection)
+    sys.exit()
+elif mode == "b":
+    import run_rl
+    run_rl.run(conn, connection)
+    sys.exit()
 
 
 # Initialisation de l'affichage
@@ -79,11 +91,11 @@ try:
     while True:
         affichage.fill((0,0,0))
 
-        image_len_data = connection.read(struct.calcsize('<L'))
-        if not image_len_data:
+        header = connection.read(struct.calcsize('<LL'))
+        if not header:
             break
-        image_len = struct.unpack('<L', image_len_data)[0]
-        if not image_len:
+        image_len, capt_len = struct.unpack('<LL', header)
+        if not image_len or not capt_len:
             break
 
         # * Lecture des données de l'image
@@ -105,6 +117,13 @@ try:
         imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
         
         img = frame/255
+
+        extradata = b''
+        while len(extradata) < capt_len:
+            more = connection.read(capt_len - len(extradata))
+            if not more:
+                break
+            extradata += more
 
 #? ---- Boutons de controle pygame ----
         for event in pg.event.get():
@@ -179,7 +198,9 @@ try:
             affiche_texte(f"Prédiction: {ia_image.definition[pred]}", text_font, (255,255,255), wframe+2, 20)
         if mode == "a":
             affiche_texte(f"Prédiction: {ia_image.definition[pred[0]]}", text_font, (255,255,255), wframe+2, 20)
+        affiche_texte(f"Capteur: {extradata}", text_font, (255,255,255), wframe+2, 38)
         pg.display.flip() # Met à jour la fenêtre pygame
+
 
 
 finally:
@@ -187,6 +208,5 @@ finally:
     connection.close()
     conn.close()
     server_socket.close()
-
 
 
