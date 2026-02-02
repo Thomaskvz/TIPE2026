@@ -3,18 +3,16 @@ import os
 import pygame as pg
 import cv2
 
-def init():
-    supprimer = input("Supprimer les anciennes images de training ? (o/n): ").lower()
-    if supprimer == 'o':
-        confirmation = input("Êtes-vous sûr de supprimer les images ? (Cette action est IRREVERSIBLE !) (o/n): ").lower()
-        if confirmation == "o":
-            dossiers = ["training_data/avance", "training_data/droite", "training_data/gauche", "training_data/recule"]
-            for dossier in dossiers:
-                shutil.rmtree(dossier)
-                os.makedirs(dossier)
-            print("Anciennes images supprimées !")
-            return 0
-    # Si les images sont non supprimées
+texte = ""
+
+def supprime_fichiers():
+    dossiers = ["training_data/avance", "training_data/droite", "training_data/gauche", "training_data/recule"]
+    for dossier in dossiers:
+        shutil.rmtree(dossier)
+        os.makedirs(dossier)
+    print("Anciennes images supprimées !")
+
+def compte_fichiers():
     dossiers = ["training_data/avance", "training_data/droite", "training_data/gauche", "training_data/recule"]
     i = 0
     for dossier in dossiers:
