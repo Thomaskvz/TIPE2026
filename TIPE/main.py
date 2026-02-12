@@ -9,26 +9,181 @@ import ia_image
 import deterministe
 import training
 import manuel
-
-# Choix du mode de controle ou training
-mode = input("Veuillez choisir le mode de controle \n(Automatique: a, Manuel: m, Training: t, Déterministe: d, TensorFlow: f):").lower()
-
-# Choix du modèle à charger
-if mode == "a":
-    pred = [3]
-    ia_image.clf = ia_image.init()
+from modules_pygame.boutons import Button
+import threading
 
 
+# Initialisation de l'affichage
 
-# Possibilité de supprimer les anciennes images en mode training
-if mode == "t":
-    i = training.init()
+pg.init()
+pg.display.set_caption("Le meilleur TIPE de l'UNIVERS")
+height = 720
+width = 1280
+affichage = pg.display.set_mode((width,height))
 
-if mode == "d":
-    pred = 3
-    modedet,seuil = deterministe.init()
+def affiche_texte(text,text_col,x,y,size,centerx=False,centery=False):
+    text_font = pg.font.SysFont("Helvetica", size)
+    img = text_font.render(text, True, text_col)
+    w,h = text_font.size(text)
+    x = x-w/2 if centerx else x
+    y = y-h/2 if centery else y
+    affichage.blit(img, (x,y))
 
-# Connection au socket
+# ! ------ Ecran de choix du mode de controle ------
+
+isChoixMode = True
+mode = 0
+modedef = {
+    0: "Automatique",
+    1: "Manuel",
+    2: "Training",
+    3: "Déterministe"
+}
+
+boutonMode = Button(width//2-175, height//2-40, 350, 80, "Automatique", pg.font.SysFont("Helvetica", 28))
+boutonConfirmer = Button(width//2-100, height//2+60, 200, 80, "Confirmer", pg.font.SysFont("Helvetica", 28), (0,225,0), (0,0,0), (255,255,255), (0,200,0))
+
+while isChoixMode:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            pg.quit()
+            sys.exit()
+    mousepos, isMousePressed = pg.mouse.get_pos(),pg.mouse.get_pressed()[0]
+    boutonMode.update(mousepos, isMousePressed)
+    boutonConfirmer.update(mousepos, isMousePressed)
+    affichage.fill((0,0,0))
+    if boutonMode.is_clicked(mousepos, isMousePressed):
+        mode = (mode+1)%len(list(modedef.keys()))
+        boutonMode.set_text(modedef[mode])
+    if boutonConfirmer.is_clicked(mousepos, isMousePressed):
+        isChoixMode = False
+    
+    affiche_texte("Veuillez choisir le mode de controle:", (255,255,255), width//2, height//2-100, 28, True)
+    boutonMode.draw(affichage)
+    boutonConfirmer.draw(affichage)
+    pg.display.flip()
+
+# ! ------ Initialisation ------
+
+isInitialisation = True
+
+result = None
+task_done = False
+
+def run_task(func, *args):
+    global result, task_done
+    result = func(*args)
+    task_done = True
+
+isChargement = False
+userInput = ""
+
+boutonOui = Button(width//4-100+200, height//2+60, 200, 80, "Oui", pg.font.SysFont("Helvetica", 28), (0,225,0), (0,0,0), (255,255,255), (0,200,0))
+boutonNon = Button((3*width)//4-100-200, height//2+60, 200, 80, "Non", pg.font.SysFont("Helvetica", 28), (225,0,0), (0,0,0), (255,255,255), (200,0,0))
+boutonLigne = Button(width//4-100+200, height//2+60, 200, 80, "Ligne", pg.font.SysFont("Helvetica", 28))
+boutonPoint = Button((3*width)//4-100-200, height//2+60, 200, 80, "Point", pg.font.SysFont("Helvetica", 28))
+
+while isInitialisation:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            pg.quit()
+            sys.exit()
+        if event.type == pg.KEYDOWN:
+            if not isChargement:
+                if mode == 0:
+                    if event.key == pg.K_BACKSPACE:
+                        if len(userInput) > 0:
+                            userInput = userInput[:-1]
+                    elif event.key == pg.K_RETURN:
+                        isChargement = True
+                        pred = [3]
+                        threading.Thread(
+                            target=run_task,
+                            daemon=True,
+                            args=(ia_image.init,userInput)
+                        ).start()
+                    else:
+                        userInput += event.unicode
+            if mode == 3 and isChargement:
+                if event.key == pg.K_BACKSPACE:
+                    if len(userInput) > 0:
+                        userInput = userInput[:-1]
+                elif event.key == pg.K_RETURN:
+                    isInitialisation = False
+                    seuil = float(userInput)
+                else:
+                    userInput += event.unicode
+    
+    mousepos, isMousePressed = pg.mouse.get_pos(),pg.mouse.get_pressed()[0]
+    affichage.fill((0,0,0))
+
+    if mode == 0:
+        if not isChargement:
+            ia_image.texte = "Numéro du modèle à charger (n: nouveau par défaut): "
+            affiche_texte(userInput, (255,255,255), width/2, height/2-10, 28, True)
+        if isChargement and not task_done:
+            affiche_texte("Chargement...", (255,255,255), width/2, height/2-70, 28, True)
+        if isChargement and task_done:
+            affiche_texte("Sauvegarder le modèle ? (o/n):", (255,255,255), width/2, height/2-10, 28, True)
+            boutonOui.update(mousepos, isMousePressed)
+            boutonOui.draw(affichage)
+            boutonNon.update(mousepos, isMousePressed)
+            boutonNon.draw(affichage)
+            if boutonOui.is_clicked(mousepos,isMousePressed):
+                ia_image.clf = result
+                ia_image.save_model(ia_image.clf)
+                isInitialisation = False
+            if boutonNon.is_clicked(mousepos,isMousePressed):
+                ia_image.clf = result
+                isInitialisation = False
+        affiche_texte(ia_image.texte, (255,255,255), width/2, height/2-40, 28, True)
+    
+    if mode == 2:
+        boutonOui.update(mousepos, isMousePressed)
+        boutonOui.draw(affichage)
+        boutonNon.update(mousepos, isMousePressed)
+        boutonNon.draw(affichage)
+        if not isChargement:
+            affiche_texte("Supprimer les anciennes images d'apprentissage ? (o/n):", (255,255,255), width/2, height/2-40, 28, True)
+            if boutonOui.is_clicked(mousepos,isMousePressed):
+                isChargement = True
+            if boutonNon.is_clicked(mousepos,isMousePressed):
+                i = training.compte_fichiers()
+                isInitialisation = False
+        if isChargement:
+            affiche_texte("Êtes-vous sûr de supprimer les images ? (Cette action est IRREVERSIBLE !) (o/n):", (255,255,255), width/2, height/2-40, 28, True)
+            if boutonOui.is_clicked(mousepos,isMousePressed):
+                training.supprime_fichiers()
+                i = 0
+                isInitialisation = False
+            if boutonNon.is_clicked(mousepos,isMousePressed):
+                i = training.compte_fichiers()
+                isInitialisation = False
+    
+    if mode == 3:
+        pred = 3
+        if not isChargement:
+            affiche_texte('Choisissez la version du mode déterministe:', (255,255,255), width/2, height/2-44, 28, True)
+            boutonPoint.update(mousepos, isMousePressed)
+            boutonPoint.draw(affichage)
+            boutonLigne.update(mousepos, isMousePressed)
+            boutonLigne.draw(affichage)
+            if boutonLigne.is_clicked(mousepos,isMousePressed):
+                modedet = 1
+                isChargement = True
+            if boutonPoint.is_clicked(mousepos,isMousePressed):
+                modedet = 2
+                isChargement = True
+        if isChargement:
+            affiche_texte('Choisissez le seuil de détection des lignes blanches (ex: 0.8):', (255,255,255), width/2, height/2-44, 28, True)
+            affiche_texte(userInput, (255,255,255), width/2, height/2, 28, True, True)
+
+    if mode == 1:
+        isInitialisation = False
+
+    pg.display.flip()
+
+# ! ------ Connection à la Raspberry Pi ------
 
 HOST = '' if len(sys.argv) < 2 else sys.argv[1]
 PORT = 9991 if len(sys.argv) < 3 else int(sys.argv[2])
@@ -36,37 +191,51 @@ PORT = 9991 if len(sys.argv) < 3 else int(sys.argv[2])
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((HOST, PORT))
 
-server_socket.listen(0)
-print(f"Ecoute {HOST}:{PORT}...")
-conn, addr = server_socket.accept()
-print("Connecté par", addr)
+connected = False
+connected_time = 0
+
+conn, addr = None,None
+
+state = 0
+
+def wait_for_connection():
+    global connected, connected_time, conn, addr
+    server_socket.listen(0)
+    print(f"Ecoute {HOST}:{PORT}...")
+    conn, addr = server_socket.accept()
+    print("Connecté par", addr)
+    connected = True
+    connected_time = pg.time.get_ticks()
+
+# ? threading permet d'executer la fonction en même temps que la boucle
+threading.Thread(
+    target=wait_for_connection,
+    daemon=True
+).start()
+
+while state!=2:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            pg.quit()
+            sys.exit()
+    current_time = pg.time.get_ticks()
+    if state == 0:
+        affichage.fill((0, 0, 0))
+        affiche_texte("En attente de connection...", (255,255,255), width//2, height//2, 32, True, True)
+
+        if connected:
+            state = 1
+
+    elif state == 1:
+        affichage.fill((0, 0, 0))
+        affiche_texte("Connecté!", (0,255,0), width//2, height//2, 32, True, True)
+
+        if current_time - connected_time >= 2000:
+            state = 2
+    pg.display.flip()
 
 connection = conn.makefile('rb')
 prev_time = time.time()
-
-if mode == "f":
-    import train_rl
-    train_rl.train(conn, connection)
-    sys.exit()
-elif mode == "b":
-    import run_rl
-    run_rl.run(conn, connection)
-    sys.exit()
-
-
-# Initialisation de l'affichage
-
-pg.init()
-pg.display.set_caption("Le meilleur TIPE de l'UNIVERS")
-height = 240
-width = 640
-affichage = pg.display.set_mode((width,height))
-
-text_font = pg.font.SysFont("Helvetica", 18)
-
-def affiche_texte(text, font, text_col, x, y):
-    img = font.render(text, True, text_col)
-    affichage.blit(img, (x,y))
 
 hauteur = 200 # Hauteur pour le mode déterministe
 ecartement = 100 # Ecartement pour le mode déterministe
@@ -86,6 +255,8 @@ definition_byte = [b'F', b'R', b'L', b'S']
 
 dctrl = None
 val = False
+
+# ! ------ Boucle Principale ------ 
 
 try:
     while True:
@@ -125,27 +296,24 @@ try:
                 break
             extradata += more
 
-#? ---- Boutons de controle pygame ----
+#? ------ Boutons de controle pygame ------
         for event in pg.event.get():
             if event.type == pg.QUIT: # Ferme la fenêtre
                 pg.quit()
                 sys.exit()
 
-#! ---- MODE TRAINING ----
-            # TODO Commentaires à enlever si ne pose pas de problème
-            if mode == "t": # and delaycontrol + 0.1 < time.time():
-                # delaycontrol = time.time()
+#! ------ MODE TRAINING ------
+            if mode == 2:
                 i += training.main(frame, event, i) # i est le nombre de photos
                     
-#! ---- MODE MANUEL ----
-            if mode == "m" or mode == "t": # and delaycontrol + 0.1 < time.time():
-                # delaycontrol = time.time()
+#! ------ MODE MANUEL ------
+            if mode == 1 or mode == 2:
                 controlemanuel = manuel.main(event)
                 if controlemanuel != b'':
                     conn.sendall(manuel.main(event))
             
-#! ---- MODE DETERMINISTE ----
-            if mode == "d":
+#! ------ MODE DETERMINISTE ------
+            if mode == 3:
                 dc = deterministe.controle(event)
                 if dc != None:
                     dctrl, val = dc
@@ -155,7 +323,7 @@ try:
                 else:
                     controle_d[dctrl] = val
         
-        if mode == "d":
+        if mode == 3:
             if not arret:
                 if modedet == 1:
                     pg.draw.line(imgpg, (0,255,0), (0,hauteur), (wframe,hauteur))
@@ -180,8 +348,8 @@ try:
                     conn.sendall(definition_byte[pred])
 
 
-#! ---- MODE AUTOMATIQUE ----
-        if mode == "a" and not arret and delaycontrol + 0.1 < time.time():
+#! ------ MODE AUTOMATIQUE ------
+        if mode == 0 and not arret and delaycontrol + 0.1 < time.time():
             delaycontrol = time.time() 
             pred = ia_image.clf.predict(img[hframe//2:,:].flatten().reshape(1,-1))
             print(ia_image.definition[pred[0]])
@@ -191,14 +359,16 @@ try:
                 conn.sendall(b'F')
             conn.sendall(definition_byte[pred[0]])
 
-#? ---- Affichage ----
-        affichage.blit(imgpg,(0,0))
-        affiche_texte(f"Mode: {mode}", text_font, (255, 255, 255), wframe+2,2)
-        if mode == "d":
-            affiche_texte(f"Prédiction: {ia_image.definition[pred]}", text_font, (255,255,255), wframe+2, 20)
-        if mode == "a":
-            affiche_texte(f"Prédiction: {ia_image.definition[pred[0]]}", text_font, (255,255,255), wframe+2, 20)
-        affiche_texte(f"Capteur: {extradata}", text_font, (255,255,255), wframe+2, 38)
+#? ------ Affichage ------
+        pg.draw.rect(affichage, (20,20,20), pg.Rect(width/2,0,width/2,height))
+        affiche_texte("Flux vidéo:", (255,255,255), width/4, height/2-hframe/2-24, 20, True)
+        affichage.blit(imgpg,(width/4 - wframe/2,height/2 - hframe/2))
+        affiche_texte(f"Mode: {modedef[mode]}", (255, 255, 255), width/2+20,height/2-hframe/2, 20)
+        if mode == 3:
+            affiche_texte(f"Prédiction: {ia_image.definition[pred]}", (255,255,255), width/2+20, height/2-hframe/2+22, 20)
+        if mode == 0:
+            affiche_texte(f"Prédiction: {ia_image.definition[pred[0]]}", (255,255,255), width/2+20, height/2-hframe/2+22, 20)
+        affiche_texte(f"Capteur: {extradata}", (255,255,255), width/2+20, height/2-hframe/2+44, 20)
         pg.display.flip() # Met à jour la fenêtre pygame
 
 
