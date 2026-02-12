@@ -62,4 +62,9 @@ class Environment:
                 break
             sensor += more
 
-        return frame, sensor
+        hframe, wframe = frame.shape
+
+        img = frame/255
+        img = img[hframe//2:,:].flatten()
+
+        return img, sensor
