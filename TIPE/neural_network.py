@@ -11,13 +11,15 @@ import matplotlib.pyplot as plt
 from itertools import count
 import matplotlib
 import math
-from environment import Environment as env
-
+from environment import Environment
+import time
 
 device= torch.device("mps" if torch.backends.mps.is_available() else "cpu") # Utilisation du GPU/CPU pour l'entraînement
 print("device:", device)
 
 Transition= namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
+
+env = Environment()
 
 class ReplayMemory(object):
     def __init__(self, capacity):
@@ -109,16 +111,20 @@ def optimize_model():
 
 
 if torch.backends.mps.is_available():
-    num_episodes= 500
+    num_episodes= 100
 else:
-    num_episodes = 50
+    num_episodes = 100
 
 for i_episode in range(num_episodes):
+    input("Appuyez sur Entrée pour commencer l'épisode...")
     state, sensor = env.reset()
+    print("reset ok")
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-
+    print("state ok")
+    print("Début de l'épisode", i_episode)
     cpt=0
     for t in count():
+        print(t)
         action = select_action(state)
         observation, reward, done, cpt = env.step(action.item(),cpt)
         reward = torch.tensor([reward], device=device)
@@ -140,11 +146,16 @@ for i_episode in range(num_episodes):
         if done:
             episode_durations.append(t + 1)
             break
+        time.sleep(0.1)
+    env.conn.sendall(b"S")
+
 
 print('Entraînement terminé')
 torch.save(policy_net.state_dict(), os.path.join("TIPE","neural_network.pth"))
 
 
-
+with open("temps.txt", "w") as f:
+    for duration in episode_durations:
+        f.write(f"{duration}\n")
 
 

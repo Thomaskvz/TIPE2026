@@ -1,11 +1,24 @@
 import struct
 import cv2
+import numpy as np
+import socket
 
 
 class Environment:
-    def __init__(self, conn, connection):
-        self.conn = conn
-        self.connection = connection
+    def __init__(self):
+        HOST = ''
+        PORT = 9991
+
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind((HOST, PORT))
+
+        server_socket.listen(0)
+        print(f"Ecoute {HOST}:{PORT}...")
+        self.conn, addr = server_socket.accept()
+        print("Connecté par", addr)
+
+        self.connection = self.conn.makefile('rb')
+
         self.action_map={
             0:b'F',
             1:b'R',
@@ -20,25 +33,26 @@ class Environment:
 
 
 
-    def step(self, action, count):
+    def step(self, action, cpt):
         self.conn.sendall(self.action_map[action])
         frame, sensor = self.process_image()
         done=False
         reward=1   
                 
-        if sensor!=b'00':
-            count+=1
-        if count>=2:
+        if sensor==b'01' or sensor==b'10':
+            cpt+=1
+        if cpt>=2:
             done=True
             reward=-10
+            print("FUCK")
 
-        return frame, sensor, reward, done, count
+        return frame, reward, done, cpt
     
 
     def process_image(self):
         header = self.connection.read(struct.calcsize('<LL'))
-        if not header:
-            return
+        if not header or len(header) < struct.calcsize('<LL'):
+            raise RuntimeError("Socket closed or corrupted header")
         image_len, capt_len = struct.unpack('<LL', header)
         if not image_len or not capt_len:
             return
@@ -55,6 +69,9 @@ class Environment:
         frame = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
         frame = cv2.flip(frame,-1)
 
+        if frame is None:
+            raise RuntimeError("Image decode failed")
+
         sensor = b''
         while len(sensor) < capt_len:
             more = self.connection.read(capt_len - len(sensor))
@@ -63,8 +80,6 @@ class Environment:
             sensor += more
 
         hframe, wframe = frame.shape
-
-        img = frame/255
-        img = img[hframe//2:,:].flatten()
+        img = frame[hframe//2:,:].flatten()/255
 
         return img, sensor
