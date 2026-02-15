@@ -48,10 +48,6 @@ try:
         result, img_encode = cv2.imencode('.jpg', frame, encode_param)
         data = img_encode.tobytes()
 
-        # Send frame
-        client_socket.sendall(struct.pack('<L', len(data)))
-        client_socket.sendall(data)
-
         # Try receiving command (non-blocking)
         ready, _, _ = select.select([client_socket], [], [], 0)
         try: 
@@ -61,7 +57,11 @@ try:
                     break
                 d = cmd.decode()
                 print("Received:", d)
-                if d == 'F': c.forward()
+                if d == 'I':
+                    # Send frame
+                    client_socket.sendall(struct.pack('<L', len(data)))
+                    client_socket.sendall(data)
+                elif d == 'F': c.forward()
                 elif d == 'B': c.backward()
                 elif d == 'L': c.left()
                 elif d == 'R': c.right()

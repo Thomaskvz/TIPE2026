@@ -34,6 +34,7 @@ class Environment:
 
 
     def step(self, action, cpt):
+        self.conn.sendall(b'F')
         self.conn.sendall(self.action_map[action])
         frame, sensor = self.process_image()
         done=False
@@ -44,12 +45,12 @@ class Environment:
         if cpt>=2:
             done=True
             reward=-10
-            print("FUCK")
 
         return frame, reward, done, cpt
     
 
     def process_image(self):
+        self.conn.sendall(b'I')
         header = self.connection.read(struct.calcsize('<LL'))
         if not header or len(header) < struct.calcsize('<LL'):
             raise RuntimeError("Socket closed or corrupted header")
