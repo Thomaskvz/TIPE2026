@@ -42,39 +42,41 @@ try:
 
         if d == 'F': c.forward()
         elif d == 'B': c.backward()
-        elif d == 'L': c.left()
-        elif d == 'R': c.right()
+        elif d == 'L': c.left(); c.forward()
+        elif d == 'R': c.right(); c.forward()
         elif d == 'S':
             c.stop()
             c.center()
         elif d == 'C': c.center()
+        elif d == 'I':
+            # ----------------------
+            # Capture frame
+            # ----------------------
+            frame = picam2.capture_array()
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+
+            # Encode JPEG
+            result, img_encode = cv2.imencode('.jpg', frame, encode_param)
+            if not result:
+                print("JPEG encoding failed, skipping frame")
+                continue
+            img_bytes = img_encode.tobytes()
+
+            # Get sensor
+            sensor = cap.detection()
+            print("Sensor data:", sensor)
+
+            # ----------------------
+            # Send header + image + sensor
+            # ----------------------
+            header = struct.pack('<LL', len(img_bytes), len(sensor))
+            client_socket.sendall(header)
+            client_socket.sendall(img_bytes)
+            client_socket.sendall(sensor)
+
+
         else:
             print("Unknown command:", d)
-
-        # ----------------------
-        # Capture frame
-        # ----------------------
-        frame = picam2.capture_array()
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-
-        # Encode JPEG
-        result, img_encode = cv2.imencode('.jpg', frame, encode_param)
-        if not result:
-            print("JPEG encoding failed, skipping frame")
-            continue
-        img_bytes = img_encode.tobytes()
-
-        # Get sensor
-        sensor = cap.detection()
-        print("Sensor data:", sensor)
-
-        # ----------------------
-        # Send header + image + sensor
-        # ----------------------
-        header = struct.pack('<LL', len(img_bytes), len(sensor))
-        client_socket.sendall(header)
-        client_socket.sendall(img_bytes)
-        client_socket.sendall(sensor)
 
 except KeyboardInterrupt:
     print("Interrupted by user.")

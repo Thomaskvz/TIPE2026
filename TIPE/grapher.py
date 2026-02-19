@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import csv
+import os
 
 nom = input("Titre: ")
 
@@ -8,15 +9,16 @@ temps_episodes = []
 temps_episodes_moyen = []
 record = []
 
-with open(f"{nom}.csv", "r") as f:
-    file = csv.reader(f)
+nom = os.path.join("./resultats", f"{nom}.csv")
 
+with open(nom, "r") as f:
+    file = csv.reader(f)
     titres = next(file)
     for ligne in file:
-        episode.append(ligne[0])
-        temps_episodes.append(ligne[1])
-        temps_episodes_moyen.append(ligne[2])
-        record.append(ligne[3])
+        episode.append(float(ligne[0]))
+        temps_episodes.append(float(ligne[1]))
+        temps_episodes_moyen.append(float(ligne[2]))
+        record.append(float(ligne[3]))
 
 plt.close()
 plt.xlabel("Episode")

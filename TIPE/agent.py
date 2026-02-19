@@ -13,7 +13,6 @@ BATCH_SIZE = 256
 LR = 0.001 # Learning Rate
 EPS_DECAY = 30 # Il s'agit du \tau dans e^-t/\tau
 EPS_START = 0.9
-NB_EPISODES = 100
 DELAI_ACTIONS = 0.5
 
 class Agent:
@@ -63,57 +62,61 @@ numModel = len(os.listdir("./models"))
 agent = Agent()
 env = Environment()
 
-for episode in range(NB_EPISODES):
-    input("Appuyez sur Entrée pour commencer l'épisode...")
-    cpt = 0
-    temps = 0
-    done = False
-    start_time = time.time()
-    while not done:
-        print("cpt = ", cpt)
-        temps += 1
-        # Image avant l'action
-        state_old = agent.get_state(env)
-
-        # Choix de l'action, ou bien aléatoire, ou bien choisie par IA
-        action = agent.get_action(state_old)
-
-        print(f"Action choisie: {action}")
-        # Envoi de l'action
-        state_new, reward, done, cpt = env.step(action, cpt)
-
-        # train short memory
-        agent.train_short_memory(state_old, action, reward, state_new, done)
-
-        # remember
-        agent.remember(state_old, action, reward, state_new, done)
-
-        now = time.time()
-        while now - start_time < DELAI_ACTIONS:
-            _, _, done, cpt = env.step(action,cpt)
-            if done:
-                break
-            now = time.time()
+episode = 0
+try:
+    while True:
+        input("Appuyez sur Entrée pour commencer l'épisode...")
+        episode += 1
+        cpt = 0
+        temps = 0
+        done = False
         start_time = time.time()
+        while not done:
+            print("cpt = ", cpt)
+            temps += 1
+            # Image avant l'action
+            state_old = agent.get_state(env)
 
-    env.reset()
-    agent.train_long_memory()
-    agent.steps_done += 1
-    if temps > record:
-        record = temps
-        agent.model.save(f"model_dqn{numModel}.pth")
-    print(f"Fin de l'épisode:\nEpisode: {episode}, Nombre d'actions: {temps}, Record: {record}, Epsilon: {agent.epsilon}")
-    temps_episodes.append(temps)
-    temps_total += temps
-    temps_episodes_moyen.append(temps_total/len(temps_episodes))
+            # Choix de l'action, ou bien aléatoire, ou bien choisie par IA
+            action = agent.get_action(state_old)
 
-titre = input("Titre: ")
-if titre is None or titre == "":
-    nb = len(os.listdir("./resultats"))
-    titre = f"resultats{nb}.csv"
+            print(f"Action choisie: {action}")
+            # Envoi de l'action
+            state_new, reward, done, cpt = env.step(action, cpt)
 
-with open(titre, "w") as f:
-    file = csv.writer(f)
-    file.writerow(["Episode", "Nombre d'actions réalisées", "Nombre d'action moyen", "Record"])
-    for i in range(len(temps_episodes)):
-        file.writerow([i, temps_episodes[i], temps_episodes_moyen[i], record])
+            # train short memory
+            agent.train_short_memory(state_old, action, reward, state_new, done)
+
+            # remember
+            agent.remember(state_old, action, reward, state_new, done)
+
+            now = time.time()
+            while now - start_time < DELAI_ACTIONS:
+                _, _, done, cpt = env.step(action,cpt)
+                if done:
+                    break
+                now = time.time()
+            start_time = time.time()
+
+        env.reset()
+        agent.train_long_memory()
+        agent.steps_done += 1
+        if temps > record:
+            record = temps
+            agent.model.save(f"model_dqn{numModel}.pth")
+        print(f"Fin de l'épisode:\nEpisode: {episode}, Nombre d'actions: {temps}, Record: {record}, Epsilon: {agent.epsilon}")
+        temps_episodes.append(temps)
+        temps_total += temps
+        temps_episodes_moyen.append(temps_total/len(temps_episodes))
+        
+finally:
+    titre = input("Titre: ")
+    if titre is None or titre == "":
+        nb = len(os.listdir("./resultats"))
+        titre = f"resultats{nb}.csv"
+
+    with open(titre, "w") as f:
+        file = csv.writer(f)
+        file.writerow(["Episode", "Nombre d'actions réalisées", "Nombre d'action moyen", "Record"])
+        for i in range(len(temps_episodes)):
+            file.writerow([i, temps_episodes[i], temps_episodes_moyen[i], record])
