@@ -11,7 +11,7 @@ import csv
 MAX_MEMORY = 100_000 # Nombre de valeurs conservées dans le buffer
 BATCH_SIZE = 256
 LR = 0.001 # Learning Rate
-EPS_DECAY = 2500 # Vitesse de décroissance de epsilon
+EPS_DECAY = 30 # Il s'agit du \tau dans e^-t/\tau
 EPS_START = 0.9
 NB_EPISODES = 100
 DELAI_ACTIONS = 0.5
@@ -45,7 +45,6 @@ class Agent:
 
     def get_action(self,state):
         self.epsilon = EPS_START* np.exp(-1. * self.steps_done / EPS_DECAY)
-        self.steps_done += 1
         if random.random() < self.epsilon:
             action = random.randint(0,2)
         else:
@@ -71,6 +70,7 @@ for episode in range(NB_EPISODES):
     done = False
     start_time = time.time()
     while not done:
+        print("cpt = ", cpt)
         temps += 1
         # Image avant l'action
         state_old = agent.get_state(env)
@@ -78,6 +78,7 @@ for episode in range(NB_EPISODES):
         # Choix de l'action, ou bien aléatoire, ou bien choisie par IA
         action = agent.get_action(state_old)
 
+        print(f"Action choisie: {action}")
         # Envoi de l'action
         state_new, reward, done, cpt = env.step(action, cpt)
 
@@ -87,14 +88,17 @@ for episode in range(NB_EPISODES):
         # remember
         agent.remember(state_old, action, reward, state_new, done)
 
-        
         now = time.time()
-        if now - start_time < DELAI_ACTIONS:
-            time.sleep(DELAI_ACTIONS - (now - start_time))
+        while now - start_time < DELAI_ACTIONS:
+            _, _, done, cpt = env.step(action,cpt)
+            if done:
+                break
+            now = time.time()
         start_time = time.time()
 
     env.reset()
     agent.train_long_memory()
+    agent.steps_done += 1
     if temps > record:
         record = temps
         agent.model.save(f"model_dqn{numModel}.pth")

@@ -34,7 +34,7 @@ class Environment:
 
 
     def step(self, action, cpt):
-        self.conn.sendall(b'F')
+        # self.conn.sendall(b'F')
         self.conn.sendall(self.action_map[action])
         frame, sensor = self.process_image()
         done=False
@@ -45,6 +45,7 @@ class Environment:
         if cpt>=2:
             done=True
             reward=-10
+            self.conn.sendall(b'S')
 
         return frame, reward, done, cpt
     

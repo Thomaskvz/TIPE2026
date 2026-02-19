@@ -14,7 +14,7 @@ class Linear_QNet(nn.Module):
         x = F.relu(self.linear1(x))
         x = self.linear2(x)
         return x
-    
+
     def save(self, nom="model_dqn.pth"):
         dossierModels = "./models"
         nomFichier = os.path.join(dossierModels, nom)
@@ -27,7 +27,7 @@ class QTrainer:
         self.model = model
         self.gamma = gamma
         self.optimizer = optim.Adam(model.parameters(), lr = self.lr)
-        self.criterion = nn.MSELoss # Mean Squared Error ou Erreur quadratique moyenne
+        self.criterion = nn.MSELoss() # Mean Squared Error ou Erreur quadratique moyenne
 
     def train_step(self, state, action, reward, next_state, done):
         state = torch.tensor(state, dtype=torch.float)
@@ -51,7 +51,7 @@ class QTrainer:
             if not done[i]:
                 # Q_new = r + \gamma * max(prochaine valeur de Q prédite)
                 Q_new = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
-            target[i][torch.argmax(action).item()] = Q_new
+            target[i][torch.argmax(action[i]).item()] = Q_new
 
         self.optimizer.zero_grad()
         loss = self.criterion(target,pred)
