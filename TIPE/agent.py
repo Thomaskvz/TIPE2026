@@ -108,8 +108,7 @@ try:
             affichage.fill((0, 0, 0))
             pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
             
-            # Affiche la dernière frame de l'env
-            env.process_image()[0]
+            env.process_image()
             frame = env.get_frame()
             if frame is not None:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
@@ -124,8 +123,6 @@ try:
             affiche_texte(f"Record: {record}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 66, 20)
             affiche_texte(f"Epsilon: {agent.epsilon:.4f}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 88, 20)
             affiche_texte("En attente du prochain épisode...", (255, 255, 255), 3*width//4, height//2 - 170, 28, True)
-            # affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2, height//2 - 80, 24, True)
-            # affiche_texte(f"Record: {record}", (255, 255, 255), width//2, height//2 - 40, 24, True)
             
             boutonCommencer.update(mousepos, isMousePressed)
             boutonArreter.update(mousepos, isMousePressed)
