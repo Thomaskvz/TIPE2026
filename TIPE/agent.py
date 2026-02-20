@@ -84,8 +84,15 @@ env = Environment()
 
 episode = 0
 
-boutonCommencer = Button(width//2 - 100, height//2, 200, 80, "Commencer", pg.font.SysFont("Helvetica", 28), (0, 225, 0), (0, 0, 0), (255, 255, 255), (0, 200, 0))
-boutonArreter = Button(width//2 - 100, height//2 + 100, 200, 80, "Arrêter", pg.font.SysFont("Helvetica", 28), (225, 0, 0), (0, 0, 0), (255, 255, 255), (200, 0, 0))
+boutonCommencer = Button(3*width//4 - 100, height//2, 200, 80, "Commencer", pg.font.SysFont("Helvetica", 28), (0, 225, 0), (0, 0, 0), (255, 255, 255), (0, 200, 0))
+boutonArreter = Button(3*width//4 - 100, height//2 + 100, 200, 80, "Arrêter", pg.font.SysFont("Helvetica", 28), (225, 0, 0), (0, 0, 0), (255, 255, 255), (200, 0, 0))
+
+hframe, wframe = 240, 320
+temps = 0
+action = 0
+record = 0
+
+arret_episode = False
 
 try:
     while True:
@@ -99,18 +106,26 @@ try:
             
             mousepos, isMousePressed = pg.mouse.get_pos(), pg.mouse.get_pressed()[0]
             affichage.fill((0, 0, 0))
+            pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
             
             # Affiche la dernière frame de l'env
+            env.process_image()[0]
             frame = env.get_frame()
             if frame is not None:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
                 hframe, wframe = frame.shape
+                affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe//2 - 24, 20, True)
                 affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe//2))
             
-            affiche_texte("En attente du prochain épisode...", (255, 255, 255), width//2, height//2 - 150, 28, True)
-            affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2, height//2 - 80, 24, True)
-            affiche_texte(f"Record: {record}", (255, 255, 255), width//2, height//2 - 40, 24, True)
+            affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2 + 20, height//2 - hframe//2, 20)
+            affiche_texte(f"Nb d'Actions: {temps}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 22, 20)
+            affiche_texte(f"Action: {action}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 44, 20)
+            affiche_texte(f"Record: {record}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 66, 20)
+            affiche_texte(f"Epsilon: {agent.epsilon:.4f}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 88, 20)
+            affiche_texte("En attente du prochain épisode...", (255, 255, 255), 3*width//4, height//2 - 170, 28, True)
+            # affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2, height//2 - 80, 24, True)
+            # affiche_texte(f"Record: {record}", (255, 255, 255), width//2, height//2 - 40, 24, True)
             
             boutonCommencer.update(mousepos, isMousePressed)
             boutonArreter.update(mousepos, isMousePressed)
@@ -122,11 +137,14 @@ try:
             
             if boutonArreter.is_clicked(mousepos, isMousePressed):
                 pg.quit()
-                raise KeyboardInterrupt("Training stopped by user")
+                arret_episode = True
+                break
             
             pg.display.flip()
             clock.tick(60)
 
+        if arret_episode:
+            break
         
         # ! ------ Début de l'épisode ------
         episode += 1
@@ -142,6 +160,7 @@ try:
                     sys.exit()
             
             affichage.fill((0, 0, 0))
+            pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
             
             # Image avant l'action
             state_old = agent.get_state(env)
@@ -153,7 +172,6 @@ try:
                 imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
                 hframe, wframe = frame.shape
                 
-                pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
                 affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe//2 - 24, 20, True)
                 affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe//2))
             
@@ -173,7 +191,7 @@ try:
             
             # Affichage des infos
             affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2 + 20, height//2 - hframe//2, 20)
-            affiche_texte(f"Actions: {temps}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 22, 20)
+            affiche_texte(f"Nb d'Actions: {temps}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 22, 20)
             affiche_texte(f"Action: {action}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 44, 20)
             affiche_texte(f"Record: {record}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 66, 20)
             affiche_texte(f"Epsilon: {agent.epsilon:.4f}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 88, 20)
@@ -207,9 +225,11 @@ finally:
     titre = input("Titre: ")
     if titre is None or titre == "":
         nb = len(os.listdir("./resultats"))
-        titre = f"resultats{nb}.csv"
+        titre = f"resultats{nb}"
+    titre = os.path.join("./resultats", f"{titre}.csv")
+    
 
-    with open(titre, "w") as f:
+    with open(titre, "w", newline='') as f:
         file = csv.writer(f)
         file.writerow(["Episode", "Nombre d'actions réalisées", "Nombre d'action moyen", "Record"])
         for i in range(len(temps_episodes)):

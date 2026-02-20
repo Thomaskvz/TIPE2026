@@ -183,58 +183,18 @@ while isInitialisation:
 
     pg.display.flip()
 
-# ! ------ Connection à la Raspberry Pi ------
+# ! ------ Setup UDP Socket ------
 
-HOST = '' if len(sys.argv) < 2 else sys.argv[1]
-PORT = 9991 if len(sys.argv) < 3 else int(sys.argv[2])
+PI_IP = "192.168.1.121"
+PI_SEND_PORT = 9991
+PI_CMD_PORT = 9992
 
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind((HOST, PORT))
+udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udp_socket.bind(('', PI_SEND_PORT)) 
+udp_socket.settimeout(0.1)
 
-connected = False
-connected_time = 0
+print(f"Listening on port 9991 for UDP frames from {PI_IP}:{PI_SEND_PORT}")
 
-conn, addr = None,None
-
-state = 0
-
-def wait_for_connection():
-    global connected, connected_time, conn, addr
-    server_socket.listen(0)
-    print(f"Ecoute {HOST}:{PORT}...")
-    conn, addr = server_socket.accept()
-    print("Connecté par", addr)
-    connected = True
-    connected_time = pg.time.get_ticks()
-
-# ? threading permet d'executer la fonction en même temps que la boucle
-threading.Thread(
-    target=wait_for_connection,
-    daemon=True
-).start()
-
-while state!=2:
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            pg.quit()
-            sys.exit()
-    current_time = pg.time.get_ticks()
-    if state == 0:
-        affichage.fill((0, 0, 0))
-        affiche_texte("En attente de connection...", (255,255,255), width//2, height//2, 32, True, True)
-
-        if connected:
-            state = 1
-
-    elif state == 1:
-        affichage.fill((0, 0, 0))
-        affiche_texte("Connecté!", (0,255,0), width//2, height//2, 32, True, True)
-
-        if current_time - connected_time >= 2000:
-            state = 2
-    pg.display.flip()
-
-connection = conn.makefile('rb')
 prev_time = time.time()
 
 hauteur = 200 # Hauteur pour le mode déterministe
@@ -258,43 +218,36 @@ val = False
 
 # ! ------ Boucle Principale ------ 
 
+frame = np.zeros((240,320), dtype=np.uint8)
+extradata = b''
+
 try:
     while True:
         affichage.fill((0,0,0))
-        conn.sendall(b'I')
-        header = connection.read(struct.calcsize('<LL'))
-        if not header:
-            break
-        image_len, capt_len = struct.unpack('<LL', header)
-        if not image_len or not capt_len:
-            break
-
-        # * Lecture des données de l'image
-        data = b''
-        while len(data) < image_len:
-            more = connection.read(image_len - len(data))
-            if not more:
-                break
-            data += more
-
-        # * Decode les bytes en image
-        frame = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
-        frame = cv2.flip(frame,-1)
-        hframe, wframe = frame.shape
-
-        # * Transforme l'image en surface pygame pour afficher le flux vidéo
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-
-        imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
         
-        img = frame/255
-
-        extradata = b''
-        while len(extradata) < capt_len:
-            more = connection.read(capt_len - len(extradata))
-            if not more:
-                break
-            extradata += more
+        # Try to receive UDP frame
+        try:
+            data, addr = udp_socket.recvfrom(65535)
+            if len(data) >= struct.calcsize('<LL'):
+                header_size = struct.calcsize('<LL')
+                image_len, capt_len = struct.unpack('<LL', data[:header_size])
+                
+                if len(data) >= header_size + image_len + capt_len:
+                    img_bytes = data[header_size:header_size + image_len]
+                    extradata = data[header_size + image_len:header_size + image_len + capt_len]
+                    
+                    frame = cv2.imdecode(np.frombuffer(img_bytes, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+                    frame = cv2.flip(frame, -1)
+        except socket.timeout:
+            pass
+        except Exception as e:
+            print(f"Error receiving frame: {e}")
+        
+        
+        hframe, wframe = frame.shape
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+        imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
+        img = frame / 255
 
 #? ------ Boutons de controle pygame ------
         for event in pg.event.get():
@@ -310,7 +263,7 @@ try:
             if mode == 1 or mode == 2:
                 controlemanuel = manuel.main(event)
                 if controlemanuel != b'':
-                    conn.sendall(manuel.main(event))
+                    udp_socket.sendto(controlemanuel, (PI_IP, PI_CMD_PORT))
             
 #! ------ MODE DETERMINISTE ------
             if mode == 3:
@@ -318,7 +271,7 @@ try:
                 if dc != None:
                     dctrl, val = dc
                 if dctrl == 0: # Stop
-                    conn.sendall(b'S')
+                    udp_socket.sendto(b'S', (PI_IP, PI_CMD_PORT))
                     arret = True
                 else:
                     controle_d[dctrl] = val
@@ -341,11 +294,11 @@ try:
                     if npred != None:
                         pred = npred
                     print(ia_image.definition[pred])
-                    if pred in (0,3):    # Centre les roues pour avancer ou reculer
-                        conn.sendall(b'C')
-                    if pred in (1,2):    # Avance les roues pour droite et gauche
-                        conn.sendall(b'F')
-                    conn.sendall(definition_byte[pred])
+                    if pred in (0,3):
+                        udp_socket.sendto(b'C', (PI_IP, PI_CMD_PORT))
+                    if pred in (1,2):
+                        udp_socket.sendto(b'F', (PI_IP, PI_CMD_PORT))
+                    udp_socket.sendto(definition_byte[pred], (PI_IP, PI_CMD_PORT))
 
 
 #! ------ MODE AUTOMATIQUE ------
@@ -353,11 +306,11 @@ try:
             delaycontrol = time.time() 
             pred = ia_image.clf.predict(img[hframe//2:,:].flatten().reshape(1,-1))
             print(ia_image.definition[pred[0]])
-            if pred[0] in (0,3):    # Centre les roues pour avancer ou reculer
-                conn.sendall(b'C')
-            if pred[0] in (1,2):    # Avance les roues pour droite et gauche
-                conn.sendall(b'F')
-            conn.sendall(definition_byte[pred[0]])
+            if pred[0] in (0,3):
+                udp_socket.sendto(b'C', (PI_IP, PI_CMD_PORT))
+            if pred[0] in (1,2):
+                udp_socket.sendto(b'F', (PI_IP, PI_CMD_PORT))
+            udp_socket.sendto(definition_byte[pred[0]], (PI_IP, PI_CMD_PORT))
 
 #? ------ Affichage ------
         pg.draw.rect(affichage, (20,20,20), pg.Rect(width/2,0,width/2,height))
@@ -368,15 +321,11 @@ try:
             affiche_texte(f"Prédiction: {ia_image.definition[pred]}", (255,255,255), width/2+20, height/2-hframe/2+22, 20)
         if mode == 0:
             affiche_texte(f"Prédiction: {ia_image.definition[pred[0]]}", (255,255,255), width/2+20, height/2-hframe/2+22, 20)
-        affiche_texte(f"Capteur: {extradata}", (255,255,255), width/2+20, height/2-hframe/2+44, 20)
-        pg.display.flip() # Met à jour la fenêtre pygame
-
+        if extradata:
+            affiche_texte(f"Capteur: {extradata}", (255,255,255), width/2+20, height/2-hframe/2+44, 20)
+        pg.display.flip()
 
 
 finally:
     cv2.destroyAllWindows()
-    connection.close()
-    conn.close()
-    server_socket.close()
-
-
+    udp_socket.close()

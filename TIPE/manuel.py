@@ -2,7 +2,7 @@ import pygame as pg
 import sys
 
 def main(event):
-    if event.type == pg.KEYDOWN:    #Possibilité d'arrêter la voiture même en mode Automatique
+    if event.type == pg.KEYDOWN:
         if event.key == pg.K_SPACE:
             print("Stop")     
             return b'S'
