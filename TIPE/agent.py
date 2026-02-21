@@ -176,7 +176,13 @@ try:
             action = agent.get_action(state_old)
 
             # Envoi de l'action
-            state_new, reward, done, cpt = env.step(action, cpt)
+            now = time.time()
+            while now - start_time < DELAI_ACTIONS:
+                state_new, reward, done, cpt = env.step(action, cpt)
+                if done:
+                    break
+                now = time.time()
+            start_time = time.time()
 
             # Train short memory
             agent.train_short_memory(state_old, action, reward, state_new, done)
@@ -192,14 +198,7 @@ try:
             affiche_texte(f"Action: {action}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 44, 20)
             affiche_texte(f"Record: {record}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 66, 20)
             affiche_texte(f"Epsilon: {agent.epsilon:.4f}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 88, 20)
-
-            now = time.time()
-            while now - start_time < DELAI_ACTIONS:
-                _, _, done, cpt = env.step(action, cpt)
-                if done:
-                    break
-                now = time.time()
-            start_time = time.time()
+            
             temps += 1
 
             pg.display.flip()
