@@ -14,8 +14,8 @@ from modules_pygame.boutons import Button
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 256
-LR = 0.001
-EPS_DECAY = 30
+LR = 0.0005
+EPS_DECAY = 50
 EPS_START = 0.9
 DELAI_ACTIONS = 0.5
 
@@ -38,9 +38,9 @@ def affiche_texte(text, text_col, x, y, size, centerx=False, centery=False):
 class Agent:
     def __init__(self):
         self.epsilon = 0
-        self.gamma = 0.9
+        self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = Linear_QNet(120*320, 256, 3)
+        self.model = Linear_QNet(120*320, 32, 3)
         self.trainer = QTrainer(self.model, LR, self.gamma)
         self.steps_done = 0
 
@@ -93,6 +93,36 @@ action = 0
 record = 0
 
 arret_episode = False
+
+userInput = ""
+debut = True
+# ! ------ Modifier une IA pré-entraînée ------
+while debut:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            pg.quit()
+            sys.exit()
+        if event.type == pg.KEYDOWN:
+            if event.key == pg.K_BACKSPACE:
+                if len(userInput) > 0:
+                    userInput = userInput[:-1]
+            elif event.key == pg.K_RETURN:
+                debut = False
+            else:
+                userInput += event.unicode
+    affichage.fill((0, 0, 0))
+    affiche_texte("Entrez le numéro du modèle à charger (ou laissez vide pour un nouveau modèle):", (255, 255, 255), width//2, height//2 - 50, 24, centerx=True)
+    affiche_texte(userInput, (255, 255, 255), width//2, height//2, 28, centerx=True)
+    pg.display.flip()
+
+if userInput != "":
+    numModel = userInput
+    pathmodel = os.path.join("./models", f"model_dqn{numModel}.pth")
+    if os.path.exists(pathmodel):
+        agent.model.load_state_dict(torch.load(pathmodel, weights_only=True))
+        print(f"Modèle chargé: model_dqn{numModel}.pth")
+    else:
+        print(f"Aucun modèle trouvé avec le numéro {numModel}. Un nouveau modèle sera entraîné.")
 
 try:
     while True:

@@ -185,7 +185,7 @@ while isInitialisation:
 
 # ! ------ Setup UDP Socket ------
 
-PI_IP = "192.168.1.121"
+PI_IP = "172.20.10.4"
 PI_SEND_PORT = 9991
 PI_CMD_PORT = 9992
 

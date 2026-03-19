@@ -6,7 +6,7 @@ import socket
 
 class Environment:
     def __init__(self):
-        PI_IP = "192.168.1.121"
+        PI_IP = "172.20.10.4"
         PI_SEND_PORT = 9991  # Port where Pi sends frames
         PI_CMD_PORT = 9992   # Port where Pi listens for commands
 
@@ -31,6 +31,7 @@ class Environment:
 
 
     def reset(self):
+        self.udp_socket.sendto(b'C', (self.pi_ip, self.pi_cmd_port))
         self.udp_socket.sendto(b'S', (self.pi_ip, self.pi_cmd_port))
         frame, sensor = self.process_image()
         return frame, sensor
