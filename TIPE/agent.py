@@ -15,7 +15,7 @@ from modules_pygame.boutons import Button
 MAX_MEMORY = 100_000
 BATCH_SIZE = 256
 LR = 0.0005
-EPS_DECAY = 50
+EPS_DECAY = 75
 EPS_START = 0.9
 DELAI_ACTIONS = 0.5
 
@@ -35,12 +35,12 @@ def affiche_texte(text, text_col, x, y, size, centerx=False, centery=False):
     y = y - h/2 if centery else y
     affichage.blit(img, (x, y))
 
-class Agent:
-    def __init__(self):
+class Agent():
+    def __init__(self, height, width):
         self.epsilon = 0
         self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = Linear_QNet(120*320, 32, 3)
+        self.model = Linear_QNet(height*width, 32, 3)
         self.trainer = QTrainer(self.model, LR, self.gamma)
         self.steps_done = 0
 
@@ -79,15 +79,18 @@ temps_total = 0
 record = 0
 numModel = len(os.listdir("./models"))
 
-agent = Agent()
-env = Environment()
+hframe, wframe = 60, 80
+debutimg = hframe//3 + 4
+
+agent = Agent(hframe-debutimg, wframe)
+env = Environment(debutimg)
+env.reset()
 
 episode = 0
 
 boutonCommencer = Button(3*width//4 - 100, height//2, 200, 80, "Commencer", pg.font.SysFont("Helvetica", 28), (0, 225, 0), (0, 0, 0), (255, 255, 255), (0, 200, 0))
 boutonArreter = Button(3*width//4 - 100, height//2 + 100, 200, 80, "Arrêter", pg.font.SysFont("Helvetica", 28), (225, 0, 0), (0, 0, 0), (255, 255, 255), (200, 0, 0))
 
-hframe, wframe = 240, 320
 temps = 0
 action = 0
 record = 0
@@ -140,12 +143,17 @@ try:
             
             env.process_image()
             frame = env.get_frame()
+            hframe, wframe = frame.shape
             if frame is not None:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
-                hframe, wframe = frame.shape
-                affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe//2 - 24, 20, True)
-                affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe//2))
+                imgmoit = pg.surfarray.make_surface(frame_rgb[debutimg:, :].swapaxes(0, 1))
+                imgpg = pg.transform.scale(imgpg, (320, 240))
+                wframe, hframe = imgpg.get_size()
+                affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe - 48, 20, True)
+                affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe - 24))
+                affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe - 24, 20, True)
+                affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe))
             
             affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2 + 20, height//2 - hframe//2, 20)
             affiche_texte(f"Nb d'Actions: {temps}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 22, 20)
@@ -194,10 +202,17 @@ try:
             
             # Affiche la frame actuelle
             frame = env.get_frame()
+            hframe, wframe = frame.shape
             if frame is not None:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
-                hframe, wframe = frame.shape
+                imgmoit = pg.surfarray.make_surface(frame_rgb[debutimg:, :].swapaxes(0, 1))
+                imgpg = pg.transform.scale(imgpg, (320, 240))
+                wframe, hframe = imgpg.get_size()
+                affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe - 48, 20, True)
+                affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe - 24))
+                affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe - 24, 20, True)
+                affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe))
                 
                 affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe//2 - 24, 20, True)
                 affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe//2))
@@ -248,6 +263,7 @@ try:
         temps_episodes_moyen.append(temps_total / len(temps_episodes))
         
 finally:
+    env.reset()
     titre = input("Titre: ")
     if titre is None or titre == "":
         nb = len(os.listdir("./resultats"))

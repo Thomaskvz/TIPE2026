@@ -1,0 +1,2 @@
+INFO: à partir de l'épisode 110, la voiture a été placée au départ dans le virage.
+Elle a bien appris la ligne droite mais elle n'arrive pas à prendre le virage 
