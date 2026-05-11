@@ -1,3 +1,5 @@
 Epsilon = 0.1508
 début de l'apprentissage dans le virage. 
 La voiture va tout droit et ne semble pas vouloir tourner.
+
+model_dqn16

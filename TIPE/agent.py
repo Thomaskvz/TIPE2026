@@ -1,3 +1,4 @@
+from matplotlib.pyplot import pause
 import torch
 import random
 import numpy as np
@@ -14,8 +15,8 @@ from modules_pygame.boutons import Button
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 256
-LR = 0.0005
-EPS_DECAY = 75
+LR = 0.001
+EPS_DECAY = 200
 EPS_START = 0.9
 DELAI_ACTIONS = 0.5
 
@@ -40,7 +41,7 @@ class Agent():
         self.epsilon = 0
         self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = Linear_QNet(height*width, 32, 3)
+        self.model = Linear_QNet(height*width, 256,128, 3)
         self.trainer = QTrainer(self.model, LR, self.gamma)
         self.steps_done = 0
 
@@ -61,6 +62,14 @@ class Agent():
 
     def train_short_memory(self, state, action, reward, next_state, done):
         self.trainer.train_step(state, action, reward, next_state, done)
+
+    def get_memory(self, nb, nb_actions=0):
+        L = []
+        debut = max(len(self.memory)-nb_actions, len(self.memory)-nb)
+        for i in range(debut, len(self.memory)):
+            L.append(self.memory[i][1])
+        return L[::-1]
+
 
     def get_action(self, state):
         self.epsilon = EPS_START * np.exp(-1. * self.steps_done / EPS_DECAY)
@@ -127,56 +136,149 @@ if userInput != "":
     else:
         print(f"Aucun modèle trouvé avec le numéro {numModel}. Un nouveau modèle sera entraîné.")
 
+# ! ------ Passage d'episode manuel ou automatique ? ------
+choixManuel = True
+isManuel = True
+
+boutonOui = Button(width//4 - 100, height//2 - 40, 200, 80, "Oui", pg.font.SysFont("Helvetica", 28), (0, 225, 0), (0, 0, 0), (255, 255, 255), (0, 200, 0))
+boutonNon = Button(3*width//4 - 100, height//2 - 40, 200, 80, "Non", pg.font.SysFont("Helvetica", 28), (225, 0, 0), (0, 0, 0), (255, 255, 255), (200, 0, 0))
+
+while choixManuel:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            pg.quit()
+            sys.exit()
+        if event.type == pg.KEYDOWN:
+            if event.key == pg.K_RETURN:
+                isManuel = False
+                choixManuel = False
+    affichage.fill((0, 0, 0))
+    affiche_texte("Voulez-vous passer les épisodes automatiquement ?", (255, 255, 255), width//2, height//2 - 50, 28, centerx=True)
+    
+    mousepos, isMousePressed = pg.mouse.get_pos(), pg.mouse.get_pressed()[0]
+
+    boutonOui.update(mousepos, isMousePressed)
+    boutonNon.update(mousepos, isMousePressed)
+    boutonOui.draw(affichage)
+    boutonNon.draw(affichage)
+    
+    if boutonOui.is_clicked(mousepos, isMousePressed):
+        isManuel = False
+        choixManuel = False
+    
+    if boutonNon.is_clicked(mousepos, isMousePressed):
+        isManuel = True
+        choixManuel = False
+    pg.display.flip()
+
+isManuelChoisi = isManuel
+
 try:
     while True:
         # ! ------ Écran d'attente avant l'épisode ------
-        waiting = True
-        while waiting:
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
+        print(f"isManuel: {isManuel}, isManuelChoisi: {isManuelChoisi}")
+        arretAuto = False
+        if not isManuel:
+            start_time = time.time()
+            while time.time() - start_time < 1.0:
+                for event in pg.event.get():
+                    if event.type == pg.QUIT:
+                        pg.quit()
+                        sys.exit()
+                affichage.fill((0, 0, 0))
+                pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
+
+                frame, sensor = env.process_image()
+                print(sensor)
+                if frame is not None:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                    imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
+                    imgmoit = pg.surfarray.make_surface(frame_rgb[debutimg:, :].swapaxes(0, 1))
+                    imgpg = pg.transform.scale(imgpg, (320, 240))
+                    imgmoit = pg.transform.scale(imgmoit, (320, 120))
+                    wframe, hframe = imgpg.get_size()
+
+                    affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe - 48, 20, True)
+                    affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe - 24))
+
+                    affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe//2 - 24, 20, True)
+                    affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe//2))
+                
+                affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2 + 20, height//2 - hframe//2, 20)
+                affiche_texte(f"Nb d'Actions: {temps}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 22, 20)
+                affiche_texte(f"Action: {action}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 44, 20)
+                affiche_texte(f"Record: {record}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 66, 20)
+                affiche_texte(f"Epsilon: {agent.epsilon:.4f}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 88, 20)
+                affiche_texte(f"Retour: {agent.get_memory(5, temps)}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 110, 20)
+                affiche_texte("Prochain épisode dans 1s...", (255, 255, 255), 3*width//4, height//2 - 170, 28, True)
+                
+                boutonArreter.update(pg.mouse.get_pos(), pg.mouse.get_pressed()[0])
+                boutonArreter.draw(affichage)
+                
+                if boutonArreter.is_clicked(pg.mouse.get_pos(), pg.mouse.get_pressed()[0]):
+                    isManuel = True
+                    break
+
+                if sensor == b'01' or sensor == b'10':
+                    affiche_texte("Voiture mal replacée!", (255, 0, 0), width//2, height//2 + 100, 28, centerx=True)
+                    isManuel = True
+                    time.sleep(1.0)
+                    break
+
+                pg.display.flip()
+
+        if isManuel:
+            waiting = True
+            while waiting:
+                for event in pg.event.get():
+                    if event.type == pg.QUIT:
+                        pg.quit()
+                        sys.exit()
+                
+                mousepos, isMousePressed = pg.mouse.get_pos(), pg.mouse.get_pressed()[0]
+                affichage.fill((0, 0, 0))
+                pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
+                
+                env.process_image()
+                frame = env.get_frame()
+                hframe, wframe = frame.shape
+                if frame is not None:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                    imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
+                    imgmoit = pg.surfarray.make_surface(frame_rgb[debutimg:, :].swapaxes(0, 1))
+                    imgpg = pg.transform.scale(imgpg, (320, 240))
+                    imgmoit = pg.transform.scale(imgmoit, (320, 120))
+                    wframe, hframe = imgpg.get_size()
+
+                    affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe - 48, 20, True)
+                    affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe - 24))
+
+                    affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe//2 - 24, 20, True)
+                    affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe//2))
+                
+                affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2 + 20, height//2 - hframe//2, 20)
+                affiche_texte(f"Nb d'Actions: {temps}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 22, 20)
+                affiche_texte(f"Action: {action}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 44, 20)
+                affiche_texte(f"Record: {record}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 66, 20)
+                affiche_texte(f"Epsilon: {agent.epsilon:.4f}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 88, 20)
+                affiche_texte(f"Retour: {agent.get_memory(5, temps)}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 110, 20)
+                affiche_texte("Veuillez replacer la voiture...", (255, 255, 255), 3*width//4, height//2 - 170, 28, True)
+                
+                boutonCommencer.update(mousepos, isMousePressed)
+                boutonArreter.update(mousepos, isMousePressed)
+                boutonCommencer.draw(affichage)
+                boutonArreter.draw(affichage)
+                
+                if boutonCommencer.is_clicked(mousepos, isMousePressed):
+                    waiting = False
+                
+                if boutonArreter.is_clicked(mousepos, isMousePressed):
                     pg.quit()
-                    sys.exit()
-            
-            mousepos, isMousePressed = pg.mouse.get_pos(), pg.mouse.get_pressed()[0]
-            affichage.fill((0, 0, 0))
-            pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
-            
-            env.process_image()
-            frame = env.get_frame()
-            hframe, wframe = frame.shape
-            if frame is not None:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
-                imgmoit = pg.surfarray.make_surface(frame_rgb[debutimg:, :].swapaxes(0, 1))
-                imgpg = pg.transform.scale(imgpg, (320, 240))
-                wframe, hframe = imgpg.get_size()
-                affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe - 48, 20, True)
-                affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe - 24))
-                affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe - 24, 20, True)
-                affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe))
-            
-            affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2 + 20, height//2 - hframe//2, 20)
-            affiche_texte(f"Nb d'Actions: {temps}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 22, 20)
-            affiche_texte(f"Action: {action}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 44, 20)
-            affiche_texte(f"Record: {record}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 66, 20)
-            affiche_texte(f"Epsilon: {agent.epsilon:.4f}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 88, 20)
-            affiche_texte("En attente du prochain épisode...", (255, 255, 255), 3*width//4, height//2 - 170, 28, True)
-            
-            boutonCommencer.update(mousepos, isMousePressed)
-            boutonArreter.update(mousepos, isMousePressed)
-            boutonCommencer.draw(affichage)
-            boutonArreter.draw(affichage)
-            
-            if boutonCommencer.is_clicked(mousepos, isMousePressed):
-                waiting = False
-            
-            if boutonArreter.is_clicked(mousepos, isMousePressed):
-                pg.quit()
-                arret_episode = True
-                break
-            
-            pg.display.flip()
-            clock.tick(60)
+                    arret_episode = True
+                    break
+                
+                pg.display.flip()
+                clock.tick(60)
 
         if arret_episode:
             break
@@ -197,6 +299,15 @@ try:
             affichage.fill((0, 0, 0))
             pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
             
+            boutonArreter.update(pg.mouse.get_pos(), pg.mouse.get_pressed()[0])
+            boutonArreter.draw(affichage)
+
+            if boutonArreter.is_clicked(pg.mouse.get_pos(), pg.mouse.get_pressed()[0]):
+                isManuel = True
+                arretAuto = True
+                break
+
+
             # Image avant l'action
             state_old = agent.get_state(env)
             
@@ -208,14 +319,15 @@ try:
                 imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
                 imgmoit = pg.surfarray.make_surface(frame_rgb[debutimg:, :].swapaxes(0, 1))
                 imgpg = pg.transform.scale(imgpg, (320, 240))
+                imgmoit = pg.transform.scale(imgmoit, (320, 120))
                 wframe, hframe = imgpg.get_size()
+
                 affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe - 48, 20, True)
                 affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe - 24))
-                affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe - 24, 20, True)
-                affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe))
+
+                affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe//2 - 24, 20, True)
+                affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe//2))
                 
-                affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe//2 - 24, 20, True)
-                affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe//2))
             
             # Choix de l'action
             action = agent.get_action(state_old)
@@ -250,6 +362,21 @@ try:
             clock.tick(60)
 
         env.reset()
+        time.sleep(DELAI_ACTIONS-0.1)
+
+        # Retour en arrière
+        actions_inverse = agent.get_memory(3, temps)
+        actions_inverse.append(3) # stop
+        for action in actions_inverse:
+            print(f"Action inverse: {action}")
+            env.step(action, cpt, True)
+            time.sleep(DELAI_ACTIONS-0.1)
+            
+        _, sensor = env.reset()
+        print(sensor)
+        if not arretAuto:
+            isManuel = isManuelChoisi # Retour à automatique ou manuel selon le choix initial si il n'y a pas de problème de replacement
+
         agent.train_long_memory()
         agent.steps_done += 1
         

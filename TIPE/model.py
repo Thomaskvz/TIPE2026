@@ -5,14 +5,17 @@ import torch.nn.functional as F
 import os
 
 class Linear_QNet(nn.Module):
-    def __init__(self, nb_entree, nb_cache, nb_sortie):
+    def __init__(self, nb_entree, nb_cache1, nb_cache2, nb_sortie):
         super().__init__()
-        self.linear1 = nn.Linear(nb_entree, nb_cache)
-        self.linear2 = nn.Linear(nb_cache, nb_sortie)
+        self.linear1 = nn.Linear(nb_entree, nb_cache1)
+        self.linear2 = nn.Linear(nb_cache1, nb_cache2)
+        self.linear3 = nn.Linear(nb_cache2, nb_sortie)
+
 
     def forward(self,x):
         x = F.relu(self.linear1(x))
-        x = self.linear2(x)
+        x = F.relu(self.linear2(x))
+        x = self.linear3(x)
         return x
 
     def save(self, nom="model_dqn.pth"):

@@ -22,9 +22,10 @@ class Environment:
         print(f"Listening on port {PI_SEND_PORT} for UDP frames from Pi")
 
         self.action_map = {
-            0: b'F',
+            0: b'C',
             1: b'R',
-            2: b'L'
+            2: b'L',
+            3: b'S'
         }
         
         self.last_frame = None
@@ -32,28 +33,54 @@ class Environment:
 
 
     def reset(self):
+        # stop
+        self.last_sensor = b''  # Réinitialiser le capteur pour éviter les données obsolètes
+        
+        # Vider le buffer UDP pour éliminer les vieux paquets
+        self.udp_socket.setblocking(False)
+        try:
+            while True:
+                self.udp_socket.recvfrom(65535)
+        except:
+            pass
+        self.udp_socket.setblocking(True)
+        self.udp_socket.settimeout(1.0)  # Augmenter le timeout pour laisser le temps à la Pi
+        
         self.udp_socket.sendto(b'C', (self.pi_ip, self.pi_cmd_port))
         self.udp_socket.sendto(b'S', (self.pi_ip, self.pi_cmd_port))
+        
+        import time
+        time.sleep(0.1)  # Laisser le temps à la Pi de traiter et envoyer la frame
+
         frame, sensor = self.process_image()
+        
+        # Remettre le timeout normal
+        self.udp_socket.settimeout(0.1)
+
         return frame, sensor
 
 
 
-    def step(self, action, cpt):
-        self.udp_socket.sendto(b'F', (self.pi_ip, self.pi_cmd_port))
-        self.udp_socket.sendto(self.action_map[action], (self.pi_ip, self.pi_cmd_port))
-        frame, sensor = self.process_image()
-        done=False
-        reward=1   
-                
-        if sensor==b'01' or sensor==b'10':
-            cpt+=1
-        if cpt>=2:
-            done=True
-            reward=-10
-            self.udp_socket.sendto(b'S', (self.pi_ip, self.pi_cmd_port))
+    def step(self, action, cpt, isReverse=False):
+        if not isReverse:
+            self.udp_socket.sendto(b'F', (self.pi_ip, self.pi_cmd_port))
+            self.udp_socket.sendto(self.action_map[action], (self.pi_ip, self.pi_cmd_port))
+            frame, sensor = self.process_image()
+            done=False
+            reward=1   
+                    
+            if sensor==b'01' or sensor==b'10':
+                cpt+=1
+            if cpt>=2:
+                done=True
+                reward=-10
+                self.udp_socket.sendto(b'S', (self.pi_ip, self.pi_cmd_port))
 
-        return frame, reward, done, cpt
+            return frame, reward, done, cpt
+        else:
+            self.udp_socket.sendto(b'B', (self.pi_ip, self.pi_cmd_port))
+            self.udp_socket.sendto(self.action_map[action], (self.pi_ip, self.pi_cmd_port))
+            return 
     
 
     def process_image(self):
@@ -82,7 +109,6 @@ class Environment:
                     
                     hframe, wframe = frame.shape
                     img = frame[self.debutimg:, :].flatten() / 255
-                    
                     return img, sensor
         except socket.timeout:
             # Return last frame if available
