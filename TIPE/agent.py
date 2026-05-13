@@ -14,11 +14,14 @@ import sys
 from modules_pygame.boutons import Button
 
 MAX_MEMORY = 100_000
-BATCH_SIZE = 256
+BATCH_SIZE = 64
 LR = 0.001
-EPS_DECAY = 200
+EPS_DECAY = 350
 EPS_START = 0.9
-DELAI_ACTIONS = 0.5
+DELAI_ACTIONS = 0.4
+NB_RETOURS = 6
+NEURONES_CACHE1 = 512
+NEURONES_CACHE2 = 256
 
 # ! ------ Initialisation Pygame ------
 pg.init()
@@ -37,11 +40,11 @@ def affiche_texte(text, text_col, x, y, size, centerx=False, centery=False):
     affichage.blit(img, (x, y))
 
 class Agent():
-    def __init__(self, height, width):
+    def __init__(self, height, width, cache1, cache2):
         self.epsilon = 0
-        self.gamma = 0.8
+        self.gamma = 0.99
         self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = Linear_QNet(height*width, 256,128, 3)
+        self.model = Linear_QNet(height*width, cache1, cache2, 3)
         self.trainer = QTrainer(self.model, LR, self.gamma)
         self.steps_done = 0
 
@@ -91,7 +94,7 @@ numModel = len(os.listdir("./models"))
 hframe, wframe = 60, 80
 debutimg = hframe//3 + 4
 
-agent = Agent(hframe-debutimg, wframe)
+agent = Agent(hframe-debutimg, wframe, NEURONES_CACHE1, NEURONES_CACHE2)
 env = Environment(debutimg)
 env.reset()
 
@@ -131,6 +134,17 @@ if userInput != "":
     numModel = userInput
     pathmodel = os.path.join("./models", f"model_dqn{numModel}.pth")
     if os.path.exists(pathmodel):
+        with open(os.path.join("./resultats", f"{numModel}.txt"), "r") as f:
+            L = f.readline().strip().split(": ")
+        agent = Agent(hframe-debutimg, wframe, int(L[9]), int(L[11]))
+        agent.gamma = float(L[3])
+        agent.trainer.lr = float(L[5])
+        BATCH_SIZE = int(L[7])
+        EPS_DECAY = int(L[13])
+        DELAI_ACTIONS = float(L[15])
+        NB_RETOURS = int(L[17])
+        agent.steps_done = int(L[19])
+
         agent.model.load_state_dict(torch.load(pathmodel, weights_only=True))
         print(f"Modèle chargé: model_dqn{numModel}.pth")
     else:
@@ -189,20 +203,20 @@ try:
                 pg.draw.rect(affichage, (20, 20, 20), pg.Rect(width//2, 0, width//2, height))
 
                 frame, sensor = env.process_image()
-                print(sensor)
-                if frame is not None:
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                    imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
-                    imgmoit = pg.surfarray.make_surface(frame_rgb[debutimg:, :].swapaxes(0, 1))
-                    imgpg = pg.transform.scale(imgpg, (320, 240))
-                    imgmoit = pg.transform.scale(imgmoit, (320, 120))
-                    wframe, hframe = imgpg.get_size()
+                # print(sensor)
+                # if frame is not None:
+                #     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                #     imgpg = pg.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
+                #     imgmoit = pg.surfarray.make_surface(frame_rgb[debutimg:, :].swapaxes(0, 1))
+                #     imgpg = pg.transform.scale(imgpg, (320, 240))
+                #     imgmoit = pg.transform.scale(imgmoit, (320, 120))
+                #     wframe, hframe = imgpg.get_size()
 
-                    affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe - 48, 20, True)
-                    affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe - 24))
+                #     affiche_texte("Flux vidéo:", (255, 255, 255), width//4, height//2 - hframe - 48, 20, True)
+                #     affichage.blit(imgpg, (width//4 - wframe//2, height//2 - hframe - 24))
 
-                    affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe//2 - 24, 20, True)
-                    affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe//2))
+                #     affiche_texte("Flux traité:", (255, 255, 255), width//4, height//2 + hframe//2 - 24, 20, True)
+                #     affichage.blit(imgmoit, (width//4 - wframe//2, height//2 + hframe//2))
                 
                 affiche_texte(f"Épisode: {episode}", (255, 255, 255), width//2 + 20, height//2 - hframe//2, 20)
                 affiche_texte(f"Nb d'Actions: {temps}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 22, 20)
@@ -261,7 +275,7 @@ try:
                 affiche_texte(f"Action: {action}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 44, 20)
                 affiche_texte(f"Record: {record}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 66, 20)
                 affiche_texte(f"Epsilon: {agent.epsilon:.4f}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 88, 20)
-                affiche_texte(f"Retour: {agent.get_memory(5, temps)}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 110, 20)
+                affiche_texte(f"Retour: {agent.get_memory(NB_RETOURS, temps)}", (255, 255, 255), width//2 + 20, height//2 - hframe//2 + 110, 20)
                 affiche_texte("Veuillez replacer la voiture...", (255, 255, 255), 3*width//4, height//2 - 170, 28, True)
                 
                 boutonCommencer.update(mousepos, isMousePressed)
@@ -362,15 +376,15 @@ try:
             clock.tick(60)
 
         env.reset()
-        time.sleep(DELAI_ACTIONS-0.1)
+        time.sleep(DELAI_ACTIONS-0.05)
 
         # Retour en arrière
-        actions_inverse = agent.get_memory(3, temps)
+        actions_inverse = agent.get_memory(NB_RETOURS, temps)
         actions_inverse.append(3) # stop
         for action in actions_inverse:
             print(f"Action inverse: {action}")
             env.step(action, cpt, True)
-            time.sleep(DELAI_ACTIONS-0.1)
+            time.sleep(DELAI_ACTIONS-0.05)
             
         _, sensor = env.reset()
         print(sensor)
@@ -404,5 +418,19 @@ finally:
         for i in range(len(temps_episodes)):
             file.writerow([i, temps_episodes[i], temps_episodes_moyen[i], record])
     
+    with open(os.path.join("./resultats", f"{numModel}.txt"), "w+") as f:
+        f.write(f"Modèle: model_dqn{numModel}.pth\n")
+        f.write(f"Gamma: {agent.gamma}\n")
+        f.write(f"LR: {agent.trainer.lr}\n")
+        f.write(f"Batch size: {BATCH_SIZE}\n")
+        f.write(f"Neurones couche 1: 512\n")
+        f.write(f"Neurones couche 2: 256\n")
+        f.write(f"EPS_DECAY: {EPS_DECAY}\n")
+        f.write(f"DELAI_ACTIONS: {DELAI_ACTIONS}\n")
+        f.write(f"NB_RETOURS: {NB_RETOURS}\n")
+        f.write(f"Steps done: {agent.steps_done}\n")
+        f.write(f"CSV: {titre[11:]}\n")
+        
+
     pg.quit()
     cv2.destroyAllWindows()

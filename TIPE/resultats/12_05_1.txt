@@ -1,0 +1,5 @@
+model_dqn54.pth
+Epsilon decay: 200
+Neurones cachés: 256 -> 128
+LR: 0.001
+gamma: 0.8
