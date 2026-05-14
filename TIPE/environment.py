@@ -7,7 +7,8 @@ import socket
 class Environment:
     def __init__(self, debutimg):
         self.debutimg = debutimg
-        PI_IP = "172.20.10.4"
+        #PI_IP = "172.20.10.4"
+        PI_IP = "192.168.1.158"
         PI_SEND_PORT = 9991  # Port where Pi sends frames
         PI_CMD_PORT = 9992   # Port where Pi listens for commands
 

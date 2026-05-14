@@ -1,0 +1,11 @@
+Modèle: model_dqn72.pth
+Gamma: 0.99
+LR: 0.001
+Batch size: 64
+Neurones couche 1: 512
+Neurones couche 2: 256
+EPS_DECAY: 350
+DELAI_ACTIONS: 0.4
+NB_RETOURS: 6
+Steps done: 520
+CSV: \13_05_1bis.csv

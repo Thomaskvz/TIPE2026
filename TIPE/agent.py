@@ -16,8 +16,8 @@ from modules_pygame.boutons import Button
 MAX_MEMORY = 100_000
 BATCH_SIZE = 64
 LR = 0.001
-EPS_DECAY = 350
-EPS_START = 0.9
+EPS_DECAY = 1000
+EPS_START = 0.99
 DELAI_ACTIONS = 0.4
 NB_RETOURS = 6
 NEURONES_CACHE1 = 512
@@ -75,7 +75,8 @@ class Agent():
 
 
     def get_action(self, state):
-        self.epsilon = EPS_START * np.exp(-1. * self.steps_done / EPS_DECAY)
+        # self.epsilon = EPS_START * np.exp(-1. * self.steps_done / EPS_DECAY)
+        self.epsilon = EPS_START - self.steps_done / EPS_DECAY
         if random.random() < self.epsilon:
             action = random.randint(0, 2)
         else:
@@ -135,15 +136,17 @@ if userInput != "":
     pathmodel = os.path.join("./models", f"model_dqn{numModel}.pth")
     if os.path.exists(pathmodel):
         with open(os.path.join("./resultats", f"{numModel}.txt"), "r") as f:
-            L = f.readline().strip().split(": ")
-        agent = Agent(hframe-debutimg, wframe, int(L[9]), int(L[11]))
-        agent.gamma = float(L[3])
-        agent.trainer.lr = float(L[5])
-        BATCH_SIZE = int(L[7])
-        EPS_DECAY = int(L[13])
-        DELAI_ACTIONS = float(L[15])
-        NB_RETOURS = int(L[17])
-        agent.steps_done = int(L[19])
+            L = f.readlines()
+        L = [line.strip().split(": ") for line in L]
+        print(L)
+        agent = Agent(hframe-debutimg, wframe, int(L[4][1]), int(L[5][1]))
+        agent.gamma = float(L[1][1])
+        agent.trainer.lr = float(L[2][1])
+        BATCH_SIZE = int(L[3][1])
+        EPS_DECAY = int(L[6][1])
+        DELAI_ACTIONS = float(L[7][1])
+        NB_RETOURS = int(L[8][1])
+        agent.steps_done = int(L[9][1])
 
         agent.model.load_state_dict(torch.load(pathmodel, weights_only=True))
         print(f"Modèle chargé: model_dqn{numModel}.pth")
@@ -186,6 +189,12 @@ while choixManuel:
     pg.display.flip()
 
 isManuelChoisi = isManuel
+
+with open(f"./resultats/{numModel}.csv", "w", newline='') as f:
+    file = csv.writer(f)
+    file.writerow(["Episode", "Nombre d'actions réalisées", "Nombre d'action moyen", "Record"])
+
+
 
 try:
     while True:
@@ -396,12 +405,47 @@ try:
         
         if temps > record:
             record = temps
-            agent.model.save(f"model_dqn{numModel}.pth")
+            agent.model.save(f"model_dqn{numModel}.pth")            
         
         print(f"Fin de l'épisode:\nÉpisode: {episode}, Nombre d'actions: {temps}, Record: {record}, Epsilon: {agent.epsilon}")
         temps_episodes.append(temps)
         temps_total += temps
         temps_episodes_moyen.append(temps_total / len(temps_episodes))
+
+        with open(f"./resultats/{numModel}.csv", "w", newline='') as f:
+            file = csv.writer(f)
+            file.writerow([episode, temps_episodes[episode-1], temps_episodes_moyen[episode-1], record])
+
+
+except Exception as e:
+    print("ERREUR!!!!!: ", e)
+    env.reset()
+    titre = input("Titre: ")
+    if titre is None or titre == "":
+        nb = len(os.listdir("./resultats"))
+        titre = f"resultats{nb}"
+    titre = os.path.join("./resultats", f"{titre}.csv")
+    
+
+    with open(titre, "w", newline='') as f:
+        file = csv.writer(f)
+        file.writerow(["Episode", "Nombre d'actions réalisées", "Nombre d'action moyen", "Record"])
+        for i in range(len(temps_episodes)):
+            file.writerow([i, temps_episodes[i], temps_episodes_moyen[i], record])
+    
+    with open(os.path.join("./resultats", f"{numModel}.txt"), "w+") as f:
+        f.write(f"Modèle: model_dqn{numModel}.pth\n")
+        f.write(f"Gamma: {agent.gamma}\n")
+        f.write(f"LR: {agent.trainer.lr}\n")
+        f.write(f"Batch size: {BATCH_SIZE}\n")
+        f.write(f"Neurones couche 1: 512\n")
+        f.write(f"Neurones couche 2: 256\n")
+        f.write(f"EPS_DECAY: {EPS_DECAY}\n")
+        f.write(f"DELAI_ACTIONS: {DELAI_ACTIONS}\n")
+        f.write(f"NB_RETOURS: {NB_RETOURS}\n")
+        f.write(f"Steps done: {agent.steps_done}\n")
+        f.write(f"CSV: {titre[11:]}\n")
+
         
 finally:
     env.reset()
