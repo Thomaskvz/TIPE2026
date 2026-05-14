@@ -16,14 +16,18 @@ def charge_data(dossier):
     for fichier in os.listdir(dossier):
         img_path = os.path.join(dossier, fichier)
         img = cv2.imread(img_path,cv2.IMREAD_GRAYSCALE)
+<<<<<<< HEAD
+        img = cv2.resize(img, (16, 6))  # Redimensionner les images à une taille fixe
+=======
         img = cv2.resize(img, (80, 30))  # Redimensionner les images à une taille fixe
+>>>>>>> dda15ee518910d2f441d78122b45fcd0048febe1
         img = img/255
         images.append(img.flatten())
     return images
 
 definition = ["Avance", "Droite", "Gauche"]
 
-knn = 9
+knn = 5
 
 print("Chargement des données...")
 data_avance = charge_data("training_data/avance")
@@ -31,7 +35,11 @@ data_droite = charge_data("training_data/droite")
 data_gauche = charge_data("training_data/gauche")
 data_recule = charge_data("training_data/recule")
 
+<<<<<<< HEAD
+cv2.imwrite("test/test.png", data_avance[0].reshape(6, 16)*255)
+=======
 cv2.imwrite("test/test_avance.png", data_avance[0].reshape(30, 80)*255)
+>>>>>>> dda15ee518910d2f441d78122b45fcd0048febe1
 
 print(f"Nombre d'images avance: {len(data_avance)}")
 print(f"Nombre d'images total: {len(data_avance) + len(data_droite) + len(data_gauche) + len(data_recule)}")
@@ -50,7 +58,11 @@ print("Entraînement du modèle...")
 
 # clf = SVC(kernel='linear')
 clf = MLPClassifier(
+<<<<<<< HEAD
+    hidden_layer_sizes=(128,),  # one hidden layer
+=======
     hidden_layer_sizes=(32,),  # one hidden layer
+>>>>>>> dda15ee518910d2f441d78122b45fcd0048febe1
     activation='relu',
     solver='adam',
     max_iter=300
@@ -64,5 +76,5 @@ print(f"Précision: {accuracy_score(y_test, y_pred)}")
 cm = confusion_matrix(y_test, y_pred)
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=definition)
 disp.plot() #cmap=plt.cm.Blues
-plt.title(f"Confusion Matrix (k={knn})")
+# plt.title(f"Confusion Matrix (k={knn})")
 plt.show()
