@@ -32,7 +32,7 @@ class Agent:
         dir_r = game.direction == Direction.RIGHT
         dir_u = game.direction == Direction.UP
         dir_d = game.direction == Direction.DOWN
-        
+
         # Carré de 7*7 autour de la tête
         square = np.zeros((7,7))
         for i in range(-3,4):
@@ -41,7 +41,8 @@ class Agent:
                 y = (head.y//20 + j)
                 # print(x,y)
                 if 0<=x<len(game.circuit[0]) and 0<=y<len(game.circuit):
-                    square[j+3,i+3] = game.circuit[y][x]
+                    if game.circuit[y][x] == 1:
+                        square[j+3,i+3] = game.circuit[y][x]
                 else: 
                     square[j+3,i+3] = 0
         square = np.array(square)
@@ -75,7 +76,7 @@ class Agent:
 
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
-        self.epsilon = 80 - self.n_games
+        self.epsilon = 100 - self.n_games
         final_move = [0,0,0]
         if random.randint(0, 200) < self.epsilon:
             move = random.randint(0, 2)

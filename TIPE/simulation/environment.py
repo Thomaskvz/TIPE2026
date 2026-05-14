@@ -25,7 +25,7 @@ BLACK = (0,0,0)
 GREEN = (0,255,0)
 
 BLOCK_SIZE = 20
-SPEED = 30
+SPEED = 50
 
 class Environment:
 
@@ -36,6 +36,7 @@ class Environment:
         self.display = pygame.display.set_mode((self.w, self.h))
         pygame.display.set_caption('Simulateur')
         self.clock = pygame.time.Clock()
+        self.cpt = 0
         self.reset()
 
 
@@ -68,7 +69,6 @@ class Environment:
 
 
     def play_step(self, action):
-        self.frame_iteration += 1
         # 1. collect user input
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -82,7 +82,7 @@ class Environment:
         # 3. check if game over
         reward = -1
         game_over = False
-        if self.is_collision() or self.frame_iteration > 100*len(self.snake):
+        if self.is_collision() or self.frame_iteration > 50:
             game_over = True
             reward = -100
             return reward, game_over, self.score
@@ -92,14 +92,24 @@ class Environment:
         y = int(self.head.y/BLOCK_SIZE)
         if self.circuit[y][x] == 2:
             self.score += 1
-            reward = 10
+            reward = 100
             self.circuit[y][x] = 0
             self.foods -= 1
+            self.cpt = 0
+        elif self.cpt >= 2:
+            self.frame_iteration += 1
+            self.cpt = 0
+        else:
+            self.cpt += 1
         self.snake.pop()
         
         # 5. update ui and clock
         self._update_ui()
         self.clock.tick(SPEED)
+
+        if self.foods == 0:
+            self._create_circuit()
+
         # 6. return game over and score
         return reward, game_over, self.score
 
