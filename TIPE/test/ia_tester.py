@@ -16,20 +16,22 @@ def charge_data(dossier):
     for fichier in os.listdir(dossier):
         img_path = os.path.join(dossier, fichier)
         img = cv2.imread(img_path,cv2.IMREAD_GRAYSCALE)
-        img = cv2.resize(img, (160, 60))  # Redimensionner les images à une taille fixe
+        img = cv2.resize(img, (16, 6))  # Redimensionner les images à une taille fixe
         img = img/255
         images.append(img.flatten())
     return images
 
 definition = ["Avance", "Droite", "Gauche"]
 
-knn = 9
+knn = 5
 
 print("Chargement des données...")
 data_avance = charge_data("training_data/avance")
 data_droite = charge_data("training_data/droite")
 data_gauche = charge_data("training_data/gauche")
 data_recule = charge_data("training_data/recule")
+
+cv2.imwrite("test/test.png", data_avance[0].reshape(6, 16)*255)
 
 print(f"Nombre d'images avance: {len(data_avance)}")
 print(f"Nombre d'images total: {len(data_avance) + len(data_droite) + len(data_gauche) + len(data_recule)}")
@@ -47,13 +49,13 @@ X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2, random_st
 print("Entraînement du modèle...")
 
 # clf = SVC(kernel='linear')
-# clf = MLPClassifier(
-#     hidden_layer_sizes=(128,),  # one hidden layer
-#     activation='relu',
-#     solver='adam',
-#     max_iter=300
-# )
-clf = KNeighborsClassifier(n_neighbors=knn)
+clf = MLPClassifier(
+    hidden_layer_sizes=(128,),  # one hidden layer
+    activation='relu',
+    solver='adam',
+    max_iter=300
+)
+# clf = KNeighborsClassifier(n_neighbors=knn)
 clf.fit(X_train, y_train)
 
 y_pred = clf.predict(X_test)
@@ -62,5 +64,5 @@ print(f"Précision: {accuracy_score(y_test, y_pred)}")
 cm = confusion_matrix(y_test, y_pred)
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=definition)
 disp.plot() #cmap=plt.cm.Blues
-plt.title(f"Confusion Matrix (k={knn})")
+# plt.title(f"Confusion Matrix (k={knn})")
 plt.show()
