@@ -80,7 +80,7 @@ class Environment:
         self.snake.insert(0, self.head)
         
         # 3. check if game over
-        reward = -1
+        reward = -10
         game_over = False
         if self.is_collision() or self.frame_iteration > 100*len(self.snake):
             game_over = True

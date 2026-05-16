@@ -69,7 +69,10 @@ class Environment:
             frame, sensor = self.process_image()
             done=False
             reward=0.5   # Léger bonus pour chaque action (reward shaping)
-                    
+            if sensor==b'11':
+                done=True
+                reward=-20 
+                self.udp_socket.sendto(b'S', (self.pi_ip, self.pi_cmd_port))     
             if sensor==b'01' or sensor==b'10':
                 cpt+=1
             if cpt>=2:

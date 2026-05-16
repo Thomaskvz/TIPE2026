@@ -16,10 +16,10 @@ from modules_pygame.boutons import Button
 MAX_MEMORY = 100_000
 BATCH_SIZE = 64
 LR = 0.001
-EPS_DECAY = 1000
+EPS_DECAY = 2000  # Augmenté pour plus d'exploration (surtout dans les virages)
 EPS_START = 0.99
 DELAI_ACTIONS = 0.4
-NB_RETOURS = 6
+NB_RETOURS = 3
 NEURONES_CACHE1 = 512
 NEURONES_CACHE2 = 256
 
@@ -242,7 +242,7 @@ try:
                     isManuel = True
                     break
 
-                if sensor == b'01' or sensor == b'10':
+                if sensor == b'01' or sensor == b'10' or sensor == b'11':
                     affiche_texte("Voiture mal replacée!", (255, 0, 0), width//2, height//2 + 100, 28, centerx=True)
                     isManuel = True
                     time.sleep(1.0)
@@ -385,7 +385,7 @@ try:
             clock.tick(60)
 
         env.reset()
-        time.sleep(DELAI_ACTIONS-0.05)
+        time.sleep(DELAI_ACTIONS+0.05)
 
         # Retour en arrière
         actions_inverse = agent.get_memory(NB_RETOURS, temps)
@@ -393,7 +393,7 @@ try:
         for action in actions_inverse:
             print(f"Action inverse: {action}")
             env.step(action, cpt, True)
-            time.sleep(DELAI_ACTIONS-0.05)
+            time.sleep(DELAI_ACTIONS+0.05)
             
         _, sensor = env.reset()
         print(sensor)
