@@ -106,6 +106,10 @@ class Environment:
                     
                     frame = cv2.resize(frame, (80, 60))
                     frame = cv2.flip(frame, -1)
+
+                    #Transforme l'image reçue en binaire (Noir 0 ou Blanc 255)
+                    thresh = 210
+                    frame = cv2.threshold(frame, thresh, 255, cv2.THRESH_BINARY)[1]
                     
                     # Store for get_frame()
                     self.last_frame = frame

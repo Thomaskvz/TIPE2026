@@ -3,11 +3,12 @@ import struct
 import time
 import cv2
 import random
+import os
 
 SERVER_IP = "192.168.1.121"  # PC's IP
 SERVER_PORT = 9991
 PI_LISTEN_PORT = 9992  # Pi listens for commands on this port
-TARGET_FPS = 30.0 
+TARGET_FPS = 10.0 
 
 # --- Setup UDP socket for sending frames ---
 send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -62,10 +63,13 @@ try:
         # ----------------------
         now = time.time()
         if now - last_capture >= frame_interval:
-            ret, frame = cap.read()
-            if not ret:
-                print("Failed to capture frame, skipping")
-                last_capture = now
+            
+            dossier = os.listdir("../TIPE/training_data/avance/")
+            fichier = dossier[random.randint(0,len(dossier)-1)]
+
+            frame = cv2.imread(os.path.join("../TIPE/training_data/avance/",fichier), cv2.IMREAD_COLOR_RGB)
+            if frame is None:
+                print("Problem loading file")
                 continue
 
             frame = cv2.resize(frame, (320, 240), interpolation=cv2.INTER_AREA)

@@ -123,7 +123,8 @@ while isInitialisation:
             affiche_texte(userInput, (255,255,255), width/2, height/2-10, 28, True)
         if isChargement and not task_done:
             affiche_texte("Chargement...", (255,255,255), width/2, height/2-70, 28, True)
-        if isChargement and task_done and (userInput is None or userInput == "n"):
+
+        if isChargement and task_done and (userInput == "" or userInput == "n"):
             affiche_texte("Sauvegarder le modèle ? (o/n):", (255,255,255), width/2, height/2-10, 28, True)
             boutonOui.update(mousepos, isMousePressed)
             boutonOui.draw(affichage)
